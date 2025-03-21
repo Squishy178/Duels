@@ -194,7 +194,97 @@ var player2={
     rot:0,
     rotv:0,
 };
+const weapons = [
+    {
+        name:'Sword',
+        maxSpeed:0.25,
+        speed:0.05,
+        collision:[[0,0,100,100]],
+        directionChange:1.5,
+        visibleStats:{damage:5,speed:5,area:4,control:6,weight:5},
+        guardSpeed:[2,1],
+        knockbackGiven:3,
+        knockbackTaken:3,
+        guardMoveSpeed:0.33,
+        guardSwingSpeed:0.5,
+        parryFrame:[4],
+        guardReduction:0.5,
+        damage:5,
+    },
+    {
+        name:'Broadsword',
+    },
+    {
+        name:'Knife',
+        maxSpeed:0.3,
+        speed:0.1,
+        collision:[[0,0,100,100]],
+        directionChange:4,
+        visibleStats:{damage:7,speed:7,area:2,control:6,weight:2},
+        guardSpeed:[2.5,2],
+        knockbackGiven:2,
+        knockbackTaken:6,
+        guardMoveSpeed:0.5,
+        guardSwingSpeed:0.7,
+        parryFrame:[4],
+        guardReduction:0.7,
+        damage:7,
+    },
+    {
+        name:'Hammer',
+        maxSpeed:0.5,
+        speed:0.04,
+        collision:[[0,0,100,100]],
+        directionChange:0.5,
+        visibleStats:{damage:8,speed:6,area:8,control:1,weight:9},
+        guardSpeed:[1,0.5],
+        knockbackGiven:8,
+        knockbackTaken:2,
+        guardMoveSpeed:0.2,
+        guardSwingSpeed:0.33,
+        parryFrame:[3],
+        guardReduction:0.35,
+        damage:8,
+    },
+    {
+        name:'Shield',
+    },
+    {
+        name:'Dual',
+        maxSpeed:0.4,
+        speed:0.09,
+        collision:[[0,0,100,100]],
+        directionChange:0.5,
+        visibleStats:{damage:8,speed:6,area:8,control:1,weight:9},
+        guardSpeed:[1,0.5],
+        knockbackGiven:8,
+        knockbackTaken:2,
+        guardMoveSpeed:0.2,
+        guardSwingSpeed:0.33,
+        parryFrame:[3],
+        guardReduction:0.35,
+        damage:8,
+    },
+    {
+        name:'Flail',
+        maxSpeed:0.4,
+        speed:0.09,
+        collision:[[0,0,100,100]],
+        directionChange:0.5,
+        visibleStats:{damage:8,speed:6,area:8,control:1,weight:9},
+        guardSpeed:[1,0.5],
+        knockbackGiven:8,
+        knockbackTaken:2,
+        guardMoveSpeed:0.2,
+        guardSwingSpeed:0.33,
+        parryFrame:[3],
+        guardReduction:0.35,
+        damage:8,
+    },
 
+
+
+];
 var enemies=[];
 var keyBinds={
     player:{
@@ -204,7 +294,7 @@ var keyBinds={
         'DOWN':'S',
         'SWORDL':'LEFT',
         'SWORDR':'RIGHT',
-        'GUARD':'UP'
+        'GUARD':'UP',
     },
     player1:{
         'LEFT':'A',
@@ -271,7 +361,7 @@ function draw(){
         }
         if (player.kbCD<1){
             if (Game.key.pressed(keyBind('RIGHT',1,1)) && player.xv<6*movement){player.xv+=movement*0.4*((player.xv<0?1.5:1));}
-            if (Game.key.pressed(keyBind('LEFT',1,1)) && player.xv>-6*movement) player.xv-=movement*0.4*((player.xv>0?1.5:1));
+            if (Game.key.pressed(keyBind('LEFT',1,1)) && player.xv>-6*movement){player.xv-=movement*0.4*((player.xv>0?1.5:1));}
 
             if (Game.key.pressed(keyBind('DOWN',1,1))  && player.yv<6*movement) player.yv+=movement*0.4*((player.xv<0?1.5:1));
             if (Game.key.pressed(keyBind('UP',1,1))  && player.yv>-6*movement) player.yv-=movement*0.4*((player.xv>0?1.5:1));
@@ -283,9 +373,11 @@ function draw(){
         
 
         if (Game.key.pressed(keyBind('SWORDR',1,1)) && player.rotv<0.25 * swing){
+            if (player.rotv<0) swing *= 2;
             player.rotv+=0.05 * swing;
         }
         if (Game.key.pressed(keyBind('SWORDL',1,1)) && player.rotv>-0.25 * swing){
+            if (player.rotv>0) swing *= 2;
             player.rotv-=0.05 * swing;
         }
         if (Game.key.pressed(keyBind('GUARD',1,1))){
@@ -294,7 +386,7 @@ function draw(){
         }
         
         if (Game.collide.rect2D(player.x-25+50*Math.cos(player.rot),player.y-25+50*Math.sin(player.rot),100,100,640,0,1,640)){
-            player.x-=player.xv;
+            player.x-=player.xv * Game.deltaTime * 40;
             player.xv=-10*(0.2+Math.abs(player.rotv));
             player.kbCD=10;
             player.rot-=player.rotv * Game.deltaTime * 40;
@@ -302,21 +394,21 @@ function draw(){
         }
 
         if (Game.collide.rect2D(player.x-25+50*Math.cos(player.rot),player.y-25+50*Math.sin(player.rot),100,100,0,0,1,640)){
-            player.x-=player.xv;
+            player.x-=player.xv * Game.deltaTime * 40;
             player.xv=10*(Math.abs(player.rotv));
             player.kbCD=10;
             player.rot-=player.rotv * Game.deltaTime * 40;
             player.rotv=0;
         }
         if (Game.collide.rect2D(player.x-25+50*Math.cos(player.rot),player.y-25+50*Math.sin(player.rot),100,100,0,0,640,1)){
-            player.y-=player.yv;
+            player.y-=player.yv * Game.deltaTime * 40;
             player.yv=10*(Math.abs(player.rotv));
             player.kbCD=10;
             player.rot-=player.rotv * Game.deltaTime * 40;
             player.rotv=0;
         }
         if (Game.collide.rect2D(player.x-25+50*Math.cos(player.rot),player.y-25+50*Math.sin(player.rot),100,100,0,639,640,640)){
-            player.y-=player.yv;
+            player.y-=player.yv * Game.deltaTime * 40;
             player.yv=-10*(Math.abs(player.rotv));
             player.kbCD=10;
             player.rot-=player.rotv * Game.deltaTime * 40;
