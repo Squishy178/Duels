@@ -111,11 +111,6 @@ if (true){
         Game.key.array.down[e.keyCode] = false;
         Game.key.array.release[e.keyCode] = e.keyCode;
     },false);
-
-    Game.sample.cameraSmooth2D=function(desiredX,desiredY,ease){
-        Game.camera.x+=(desiredX-Game.camera.x)/ease;
-        Game.camera.y+=(desiredY-Game.camera.y)/ease;
-    }
     Game.mouse.clickArea=function(x1,y1,sx1,sy1){//Detects if the mouse clicked inside an area or not
         if (Game.mouse.click){
             // if (Game.collide.rect2D(x1,y1,sx1,sy1,Game.mouse.x,Game.mouse.y,1,1) || Game.collide.rect2D(x1,y1,sx1,sy1,Game.array.clickLastX,Game.mouse.array.clickLastY,1,1)){
@@ -159,7 +154,8 @@ function getSfx(url) {
     return loadedSfx[url];
 }
 const preloadImages=[  
-    'player.png',  
+    'player.png',
+    'weapon0.png',  
 ];
 
 
@@ -176,14 +172,17 @@ function playSfx(url) {
 }
 
 var player={
-    x:0,
-    y:0,
+    x:320,
+    y:320,
     xv:0,
     yv:0,
     weapon:0,
     skin:0,
     rot:0,
     rotv:0,
+    kbCD:0,
+    bnCD:0,
+    gdCD:0,
 };
 var player2={
     x:0,
@@ -203,24 +202,25 @@ var keyBinds={
         'RIGHT':'D',
         'UP':'W',
         'DOWN':'S',
-        'SWORD LEFT':'LEFT',
-        'SWORD RIGHT':'RIGHT',
+        'SWORDL':'LEFT',
+        'SWORDR':'RIGHT',
+        'GUARD':'UP'
     },
     player1:{
         'LEFT':'A',
         'RIGHT':'D',
         'UP':'W',
         'DOWN':'S',
-        'SWORD LEFT':'C',
-        'SWORD RIGHT':'B',
+        'SWORDL':'C',
+        'SWORDR':'B',
     },
     player2:{
         'LEFT':'H',
         'RIGHT':'K',
         'UP':'U',
         'DOWN':'J',
-        'SWORD LEFT':'LEFT',
-        'SWORD RIGHT':'RIGHT',
+        'SWORDL':'LEFT',
+        'SWORDR':'RIGHT',
     },
     'MENU':'ENTER',
     'CANCEL':'ESCAPE',
@@ -234,45 +234,96 @@ function keyBind(key,maxPlayer,player){
 }
 
 
-function pasteImg(c,img,x,y,sx,sy,rotation){
-    var image=new Image();
-    image.src=img;	
-    c.translate(x-(sx/2), y-(sy/2)); // translate to rectangle center
-
-    c.rotate(rotation); 
-    c.drawImage(image, -sx/2, -sy/2,sx,sy);
-
-    c.rotate(-rotation); // rotate
-    c.translate(-x+(sx/2), -y+(sy/2));
-    
-}
-
 //---------------------------------------------------- DRAW -----------------------------------
 function draw(){
     if (canvas.getContext) {
         
         const ctx = canvas.getContext("2d");
+        function pasteImg(image,x,y,sx,sy,rotation){
+            ctx.save();
+            ctx.translate(x+(sx/2), y+(sy/2)); // translate to rectangle center
+            ctx.rotate(rotation);
+
+            ctx.translate(-x-(sx/2),-y-(sy/2));
+            ctx.drawImage(image,x, y,sx,sy);
+            ctx.restore();
+  
+            
+        }
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.globalAlpha = 1;
         ctx.font = "20px serif";
         ctx.globalAlpha=1;
+        //Player
         ctx.drawImage(getImage('player.png'),player.x,player.y,50,50);
+        //Weapon
+        pasteImg(getImage('weapon0.png'),
+        player.x-25+50*Math.cos(player.rot+(player.gdCD*(Math.PI/-10)/10)),
+        player.y-25+50*Math.sin(player.rot+(player.gdCD*(Math.PI/-10)/10)),
+        100,100,
+        player.rot+(player.gdCD*(Math.PI/1.5)/10));
+        
+        let movement = 1;
+        let swing = 1;
+        if (player.gdCD>0){
+            movement /= 3;
+            swing /= 2;
+        }
+        if (player.kbCD<1){
+            if (Game.key.pressed(keyBind('RIGHT',1,1)) && player.xv<6*movement){player.xv+=movement*0.4*((player.xv<0?1.5:1));}
+            if (Game.key.pressed(keyBind('LEFT',1,1)) && player.xv>-6*movement) player.xv-=movement*0.4*((player.xv>0?1.5:1));
 
-        if (Game.key.pressed(keyBind('RIGHT',1,1)) && player.xv<6){player.xv+=0.4*((player.xv<0?1.5:1));}
-        if (Game.key.pressed(keyBind('LEFT',1,1)) && player.xv>-6) player.xv-=0.4*((player.xv>0?1.5:1));
-
-        if (Game.key.pressed(keyBind('DOWN',1,1))  && player.yv<6) player.yv+=0.4*((player.xv<0?1.5:1));
-        if (Game.key.pressed(keyBind('UP',1,1))  && player.yv>-6) player.yv-=0.4*((player.xv>0?1.5:1));
-
+            if (Game.key.pressed(keyBind('DOWN',1,1))  && player.yv<6*movement) player.yv+=movement*0.4*((player.xv<0?1.5:1));
+            if (Game.key.pressed(keyBind('UP',1,1))  && player.yv>-6*movement) player.yv-=movement*0.4*((player.xv>0?1.5:1));
+        }
         player.x += player.xv * Game.deltaTime * 40;
         player.y += player.yv * Game.deltaTime * 40;
-        if (Game.key.pressed(keyBind('RIGHT',1,1)) || Game.key.pressed(keyBind('LEFT',1,1))){}else{
-            player.xv*=0.9;
+        player.rot += player.rotv * Game.deltaTime * 40;
+
+        
+
+        if (Game.key.pressed(keyBind('SWORDR',1,1)) && player.rotv<0.25 * swing){
+            player.rotv+=0.05 * swing;
         }
-        if (Game.key.pressed(keyBind('UP',1,1)) || Game.key.pressed(keyBind('DOWN',1,1))){}else{
-            player.yv*=0.9;
+        if (Game.key.pressed(keyBind('SWORDL',1,1)) && player.rotv>-0.25 * swing){
+            player.rotv-=0.05 * swing;
         }
-        if (player.x>640-50){
+        if (Game.key.pressed(keyBind('GUARD',1,1))){
+            player.gdCD+=2;
+            if (player.gdCD>7) player.gdCD=8;
+        }
+        
+        if (Game.collide.rect2D(player.x-25+50*Math.cos(player.rot),player.y-25+50*Math.sin(player.rot),100,100,640,0,1,640)){
+            player.x-=player.xv;
+            player.xv=-10*(0.2+Math.abs(player.rotv));
+            player.kbCD=10;
+            player.rot-=player.rotv * Game.deltaTime * 40;
+            player.rotv=0;
+        }
+
+        if (Game.collide.rect2D(player.x-25+50*Math.cos(player.rot),player.y-25+50*Math.sin(player.rot),100,100,0,0,1,640)){
+            player.x-=player.xv;
+            player.xv=10*(Math.abs(player.rotv));
+            player.kbCD=10;
+            player.rot-=player.rotv * Game.deltaTime * 40;
+            player.rotv=0;
+        }
+        if (Game.collide.rect2D(player.x-25+50*Math.cos(player.rot),player.y-25+50*Math.sin(player.rot),100,100,0,0,640,1)){
+            player.y-=player.yv;
+            player.yv=10*(Math.abs(player.rotv));
+            player.kbCD=10;
+            player.rot-=player.rotv * Game.deltaTime * 40;
+            player.rotv=0;
+        }
+        if (Game.collide.rect2D(player.x-25+50*Math.cos(player.rot),player.y-25+50*Math.sin(player.rot),100,100,0,639,640,640)){
+            player.y-=player.yv;
+            player.yv=-10*(Math.abs(player.rotv));
+            player.kbCD=10;
+            player.rot-=player.rotv * Game.deltaTime * 40;
+            player.rotv=0;
+        }
+
+        if (player.x>640-50){//Level bounds
             player.x=640-50;
             player.xv=0;
         }
@@ -288,7 +339,20 @@ function draw(){
             player.y=0;
             player.yv=0;
         }
-        pasteImg(ctx,'player.png',10,0,100,100,0);
+
+        if (Game.key.pressed(keyBind('RIGHT',1,1)) || Game.key.pressed(keyBind('LEFT',1,1))){}else{
+            player.xv*=0.9;
+        }
+        if (Game.key.pressed(keyBind('UP',1,1)) || Game.key.pressed(keyBind('DOWN',1,1))){}else{
+            player.yv*=0.9;
+        }
+        if (Game.key.pressed(keyBind('SWORDL',1,1)) || Game.key.pressed(keyBind('SWORDR',1,1))){}else{
+            player.rotv*=0.9;
+        }
+        if (player.kbCD>0) player.kbCD--;
+        if (player.bnCD>0) player.bnCD--;
+        if (player.gdCD>0 && !Game.key.pressed(keyBind('GUARD',1,1))) player.gdCD--;
+        
         
 
     }
