@@ -13,13 +13,6 @@ if (true){
     var prevDelta=Date.now();
     Game.deltaTime=Date.now();
 
-    Game.camera={x:0,y:0}
-    Game.globalPos2Dx=function(x){//These functions are for placing coords on the global map, camera included-
-        return (x-Game.camera.x);
-    }
-    Game.globalPos2Dy=function(y){
-        return (y-Game.camera.y);
-    }
     Game.key.array.down=[];//Which keys are held down at the moment. Would not call this function unless you know all the keycodes.
     Game.key.array.click=[];
     Game.key.array.release=[];
@@ -41,22 +34,7 @@ if (true){
     Game.randomInt=function(min,max){return min+Math.round(Math.random()*(max-min));}//Returns a random integer based on a minimum and maximum, and then rounded.
     Game.distance2D=function(x1,y1,x2,y2){return Math.sqrt((x1-x2)^2+(y1-y2)^2);}
     // Game.distance3D=function(x1,y1,z1,x2,y2,z2){return Math.sqrt((x1-x2)^2+(y1-y2)^2+(z1-z2)^2);}
-    Game.canvas.global.image=function(c,img,x,y,sx,sy,rotation){//c is the ctx. The canvas. Please use that for c
-        var image=new Image();
-        image.src=img;	
-        c.save();
-        c.translate(Game.globalPos2Dx(x-(sx/2)), Game.globalPos2Dy(y-(sy/2))); // translate to rectangle center
-        c.rotate(rotation); 
-        c.drawImage(image, -sx/2, -sy/2,sx,sy);
-        c.restore();}//I would use this function. It will help with the camera
-    Game.canvas.local.image=function(c,img,x,y,sx,sy,rotation){//c is the ctx. The canvas. Please use that for c
-        var image=new Image();
-        image.src=img;	
-        c.save();
-        c.translate(x-(sx/2), y-(sy/2)); // translate to rectangle center
-        c.rotate(rotation); 
-        c.drawImage(image, -sx/2, -sy/2,sx,sy);
-        c.restore();}//I still would use this function. It is best. Sometimes
+    
     Game.directionFrom=function(x1,y1,x2,y2){return -Math.atan2((x1-x2),(y1-y2));}
     Game.chance=function(percent){return Math.random()<=percent/100;}
     Game.collide.rect2D=function(x1,y1,sx1,sy1,x2,y2,sx2,sy2){return(x1+sx1>x2 && x1-sx2<x2 && y1+sy1>y2 && y1-sy2<y2);}//Very useful!!
@@ -180,8 +158,10 @@ function getImage(url) {
 function getSfx(url) {
     return loadedSfx[url];
 }
-const preloadImages=[    
+const preloadImages=[  
+    'player.png',  
 ];
+
 
 var loadedSfx={};
 const preloadSfxs=[
@@ -195,6 +175,78 @@ function playSfx(url) {
     loadedSfx[url].play();
 }
 
+var player={
+    x:0,
+    y:0,
+    xv:0,
+    yv:0,
+    weapon:0,
+    skin:0,
+    rot:0,
+    rotv:0,
+};
+var player2={
+    x:0,
+    y:0,
+    xv:0,
+    yv:0,
+    weapon:0,
+    skin:0,
+    rot:0,
+    rotv:0,
+};
+
+var enemies=[];
+var keyBinds={
+    player:{
+        'LEFT':'A',
+        'RIGHT':'D',
+        'UP':'W',
+        'DOWN':'S',
+        'SWORD LEFT':'LEFT',
+        'SWORD RIGHT':'RIGHT',
+    },
+    player1:{
+        'LEFT':'A',
+        'RIGHT':'D',
+        'UP':'W',
+        'DOWN':'S',
+        'SWORD LEFT':'C',
+        'SWORD RIGHT':'B',
+    },
+    player2:{
+        'LEFT':'H',
+        'RIGHT':'K',
+        'UP':'U',
+        'DOWN':'J',
+        'SWORD LEFT':'LEFT',
+        'SWORD RIGHT':'RIGHT',
+    },
+    'MENU':'ENTER',
+    'CANCEL':'ESCAPE',
+};
+function keyBind(key,maxPlayer,player){
+    if (maxPlayer==1){
+        return eval('keyBinds.player.'+key);
+    }else if (maxPlayer==2){
+        return eval('keyBinds.player'+player+'.'+key);
+    }
+}
+
+
+function pasteImg(c,img,x,y,sx,sy,rotation){
+    var image=new Image();
+    image.src=img;	
+    c.translate(x-(sx/2), y-(sy/2)); // translate to rectangle center
+
+    c.rotate(rotation); 
+    c.drawImage(image, -sx/2, -sy/2,sx,sy);
+
+    c.rotate(-rotation); // rotate
+    c.translate(-x+(sx/2), -y+(sy/2));
+    
+}
+
 //---------------------------------------------------- DRAW -----------------------------------
 function draw(){
     if (canvas.getContext) {
@@ -203,12 +255,49 @@ function draw(){
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.globalAlpha = 1;
         ctx.font = "20px serif";
+        ctx.globalAlpha=1;
+        ctx.drawImage(getImage('player.png'),player.x,player.y,50,50);
+
+        if (Game.key.pressed(keyBind('RIGHT',1,1)) && player.xv<6){player.xv+=0.4*((player.xv<0?1.5:1));}
+        if (Game.key.pressed(keyBind('LEFT',1,1)) && player.xv>-6) player.xv-=0.4*((player.xv>0?1.5:1));
+
+        if (Game.key.pressed(keyBind('DOWN',1,1))  && player.yv<6) player.yv+=0.4*((player.xv<0?1.5:1));
+        if (Game.key.pressed(keyBind('UP',1,1))  && player.yv>-6) player.yv-=0.4*((player.xv>0?1.5:1));
+
+        player.x += player.xv * Game.deltaTime * 40;
+        player.y += player.yv * Game.deltaTime * 40;
+        if (Game.key.pressed(keyBind('RIGHT',1,1)) || Game.key.pressed(keyBind('LEFT',1,1))){}else{
+            player.xv*=0.9;
+        }
+        if (Game.key.pressed(keyBind('UP',1,1)) || Game.key.pressed(keyBind('DOWN',1,1))){}else{
+            player.yv*=0.9;
+        }
+        if (player.x>640-50){
+            player.x=640-50;
+            player.xv=0;
+        }
+        if (player.x<0){
+            player.x=0;
+            player.xv=0;
+        }
+        if (player.y>640-50){
+            player.y=640-50;
+            player.yv=0;
+        }
+        if (player.y<0){
+            player.y=0;
+            player.yv=0;
+        }
+        pasteImg(ctx,'player.png',10,0,100,100,0);
+        
+
     }
 }
 
 function tick(){
     draw();
     updateGameSimple();
+
 }
 
 for (var i = 0; i < preloadImages.length; i++){
@@ -217,4 +306,9 @@ for (var i = 0; i < preloadImages.length; i++){
 for (var i = 0; i < preloadSfxs.length; i++){
     preloadSfx(preloadSfxs[i]);
 }
+
+
+
+
+
 setInterval(tick,1000/60);
