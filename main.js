@@ -154,7 +154,8 @@ function getSfx(url) {
 }
 const preloadImages=[  
     'player.png',
-    'weapon0.png',  
+    'weapon0.png', 
+    'enemy.png', 
 ];
 
 
@@ -194,6 +195,7 @@ var player2={
     rot:0,
     rotv:0,
 };
+var enemies = [];
 const weapons = [
     {
         name:'Sword',
@@ -210,9 +212,6 @@ const weapons = [
         parryFrame:[4],
         guardReduction:0.5,
         damage:5,
-    },
-    {
-        name:'Broadsword',
     },
     {
         name:'Knife',
@@ -322,7 +321,10 @@ function keyBind(key,maxPlayer,player){
         return eval('keyBinds.player'+player+'.'+key);
     }
 }
-
+function newEnemy(){
+    enemies.push({x:400,y:500,weapon:0,id:0,xv:0,yv:0,rot:0,rotv:0,});
+}
+newEnemy();
 
 //---------------------------------------------------- DRAW -----------------------------------
 function draw(){
@@ -346,6 +348,14 @@ function draw(){
         ctx.globalAlpha=1;
         //Player
         ctx.drawImage(getImage('player.png'),player.x,player.y,50,50);
+        for (var i = 0; i < enemies.length; i++){
+            ctx.drawImage(getImage('enemy.png'),enemies[i].x,enemies[i].y,50,50);
+            pasteImg(getImage('weapon'+enemies[i].weapon+'.png'),
+            enemies[i].x-25+50*Math.cos(enemies[i].rot),
+            enemies[i].y-25+50*Math.sin(enemies[i].rot),
+            100,100,
+            enemies[i].rot);
+        }
         //Weapon
         pasteImg(getImage('weapon'+player.weapon+'.png'),
         player.x-25+50*Math.cos(player.rot+(player.gdCD*(Math.PI/(-10*player.guardDir))/10)),
@@ -353,120 +363,121 @@ function draw(){
         100,100,
         player.rot+(player.gdCD*(Math.PI/(1.5*(player.guardDir)))/10));
         
-        let movement = 1;
-        let swing = 1;
-        if (player.gdCD>0){
-            movement *= weapons[player.weapon].guardMoveSpeed;
-            swing *= weapons[player.weapon].guardSwingSpeed;
-        }
-        if (player.kbCD<1){
-            if (Game.key.pressed(keyBind('RIGHT',1,1)) && player.xv<6*movement){
-                player.xv+=movement*0.4*((player.xv<0?1.5:1));
-            }
-            if (Game.key.pressed(keyBind('LEFT',1,1)) && player.xv>-6*movement){
-                player.xv-=movement*0.4*((player.xv>0?1.5:1));
-            }
-            if (Game.key.pressed(keyBind('DOWN',1,1))  && player.yv<6*movement){
-                player.yv+=movement*0.4*((player.xv<0?1.5:1));
-            }
-            if (Game.key.pressed(keyBind('UP',1,1))  && player.yv>-6*movement){
-                player.yv-=movement*0.4*((player.xv>0?1.5:1));
-            }
-        }
-        player.x += player.xv * Game.deltaTime * 40;
-        player.y += player.yv * Game.deltaTime * 40;
-        player.rot += player.rotv * Game.deltaTime * 40;
-
-        
-
-        if (Game.key.pressed(keyBind('SWORDR',1,1)) && player.rotv<0.25 * swing){
-            if (player.rotv<0) swing *= weapons[player.weapon].directionChange;
-            if (player.gdCD==0) player.guardDir=1
-            player.rotv+=0.05 * swing;
-        }
-        if (Game.key.pressed(keyBind('SWORDL',1,1)) && player.rotv>-0.25 * swing){
-            if (player.rotv>0) swing *= weapons[player.weapon].directionChange;
-            if (player.gdCD==0) player.guardDir=-1
-            player.rotv-=0.05 * swing;
-        }
-        if (Game.key.pressed(keyBind('GUARD',1,1))){
-            
-            player.gdCD+=weapons[player.weapon].guardSpeed[0];
-            
-            if (player.gdCD>8) player.gdCD=8;
-        }
-        
-        if (Game.collide.rect2D(player.x-25+50*Math.cos(player.rot),player.y-25+50*Math.sin(player.rot),100,100,640,0,1,640)){
-            player.x-=player.xv * Game.deltaTime * 40;
-            player.xv=-10*(0.2+Math.abs(player.rotv));
-            player.kbCD=10;
-            player.rot-=player.rotv * Game.deltaTime * 40;
-            player.rotv=0;
-        }
-
-        if (Game.collide.rect2D(player.x-25+50*Math.cos(player.rot),player.y-25+50*Math.sin(player.rot),100,100,0,0,1,640)){
-            player.x-=player.xv * Game.deltaTime * 40;
-            player.xv=10*(Math.abs(player.rotv));
-            player.kbCD=10;
-            player.rot-=player.rotv * Game.deltaTime * 40;
-            player.rotv=0;
-        }
-        if (Game.collide.rect2D(player.x-25+50*Math.cos(player.rot),player.y-25+50*Math.sin(player.rot),100,100,0,0,640,1)){
-            player.y-=player.yv * Game.deltaTime * 40;
-            player.yv=10*(Math.abs(player.rotv));
-            player.kbCD=10;
-            player.rot-=player.rotv * Game.deltaTime * 40;
-            player.rotv=0;
-        }
-        if (Game.collide.rect2D(player.x-25+50*Math.cos(player.rot),player.y-25+50*Math.sin(player.rot),100,100,0,639,640,640)){
-            player.y-=player.yv * Game.deltaTime * 40;
-            player.yv=-10*(Math.abs(player.rotv));
-            player.kbCD=10;
-            player.rot-=player.rotv * Game.deltaTime * 40;
-            player.rotv=0;
-        }
-        if (true){
-            ctx.globalAlpha = 0.3;//Render collision Boxes
-            ctx.fillRect(player.x+25+50*Math.cos(player.rot),player.y+50*Math.sin(player.rot),25,25);
-        }
-
-        if (player.x>640-50){//Level bounds
-            player.x=640-50;
-            player.xv=0;
-        }
-        if (player.x<0){
-            player.x=0;
-            player.xv=0;
-        }
-        if (player.y>640-50){
-            player.y=640-50;
-            player.yv=0;
-        }
-        if (player.y<0){
-            player.y=0;
-            player.yv=0;
-        }
-
-        if (Game.key.pressed(keyBind('RIGHT',1,1)) || Game.key.pressed(keyBind('LEFT',1,1))){}else{
-            player.xv*=0.9;
-        }
-        if (Game.key.pressed(keyBind('UP',1,1)) || Game.key.pressed(keyBind('DOWN',1,1))){}else{
-            player.yv*=0.9;
-        }
-        if (Game.key.pressed(keyBind('SWORDL',1,1)) || Game.key.pressed(keyBind('SWORDR',1,1))){}else{
-            player.rotv*=0.9;
-        }
-        if (player.kbCD>0) player.kbCD--;
-        if (player.bnCD>0) player.bnCD--;
-        if (player.gdCD>0 && !Game.key.pressed(keyBind('GUARD',1,1))) player.gdCD-=weapons[player.weapon].guardSpeed[1];
-        if (player.gdCD<0) player.gdCD=0;
-        
-        
 
     }
 }
+function logic(){
+    let movement = 1;
+    let swing = 1;
+    if (player.gdCD>0){
+        movement *= weapons[player.weapon].guardMoveSpeed;
+        swing *= weapons[player.weapon].guardSwingSpeed;
+    }
+    if (player.kbCD<1){
+        if (Game.key.pressed(keyBind('RIGHT',1,1)) && player.xv<6*movement){
+            player.xv+=movement*0.4*((player.xv<0?1.5:1));
+        }
+        if (Game.key.pressed(keyBind('LEFT',1,1)) && player.xv>-6*movement){
+            player.xv-=movement*0.4*((player.xv>0?1.5:1));
+        }
+        if (Game.key.pressed(keyBind('DOWN',1,1))  && player.yv<6*movement){
+            player.yv+=movement*0.4*((player.xv<0?1.5:1));
+        }
+        if (Game.key.pressed(keyBind('UP',1,1))  && player.yv>-6*movement){
+            player.yv-=movement*0.4*((player.xv>0?1.5:1));
+        }
+    }
+    player.x += player.xv * Game.deltaTime * 40;
+    player.y += player.yv * Game.deltaTime * 40;
+    player.rot += player.rotv * Game.deltaTime * 40;
 
+    
+
+    if (Game.key.pressed(keyBind('SWORDR',1,1)) && player.rotv<weapons[player.weapon].maxSpeed * swing){
+        if (player.rotv<0) swing *= weapons[player.weapon].directionChange;
+        if (player.gdCD==0) player.guardDir=1
+        player.rotv+=weapons[player.weapon].speed * swing;
+    }
+    if (Game.key.pressed(keyBind('SWORDL',1,1)) && player.rotv>-weapons[player.weapon].maxSpeed * swing){
+        if (player.rotv>0) swing *= weapons[player.weapon].directionChange;
+        if (player.gdCD==0) player.guardDir=-1
+        player.rotv-=weapons[player.weapon].speed * swing;
+    }
+    if (Game.key.pressed(keyBind('GUARD',1,1))){
+        
+        player.gdCD+=weapons[player.weapon].guardSpeed[0];
+        
+        if (player.gdCD>8) player.gdCD=8;
+    }
+    
+    if (Game.collide.rect2D(player.x-25+50*Math.cos(player.rot),player.y-25+50*Math.sin(player.rot),100,100,640,0,1,640)){
+        player.x-=player.xv * Game.deltaTime * 40;
+        player.xv=-10*(0.2+Math.abs(player.rotv));
+        player.kbCD=10;
+        player.rot-=player.rotv * Game.deltaTime * 40;
+        player.rotv=0;
+    }
+
+    if (Game.collide.rect2D(player.x-25+50*Math.cos(player.rot),player.y-25+50*Math.sin(player.rot),100,100,0,0,1,640)){
+        player.x-=player.xv * Game.deltaTime * 40;
+        player.xv=10*(Math.abs(player.rotv));
+        player.kbCD=10;
+        player.rot-=player.rotv * Game.deltaTime * 40;
+        player.rotv=0;
+    }
+    if (Game.collide.rect2D(player.x-25+50*Math.cos(player.rot),player.y-25+50*Math.sin(player.rot),100,100,0,0,640,1)){
+        player.y-=player.yv * Game.deltaTime * 40;
+        player.yv=10*(Math.abs(player.rotv));
+        player.kbCD=10;
+        player.rot-=player.rotv * Game.deltaTime * 40;
+        player.rotv=0;
+    }
+    if (Game.collide.rect2D(player.x-25+50*Math.cos(player.rot),player.y-25+50*Math.sin(player.rot),100,100,0,639,640,640)){
+        player.y-=player.yv * Game.deltaTime * 40;
+        player.yv=-10*(Math.abs(player.rotv));
+        player.kbCD=10;
+        player.rot-=player.rotv * Game.deltaTime * 40;
+        player.rotv=0;
+    }
+    if (false){
+        ctx.globalAlpha = 0.3;//Render collision Boxes
+        ctx.fillRect(player.x+25+50*Math.cos(player.rot),player.y+50*Math.sin(player.rot),25,25);
+    }
+
+    if (player.x>640-50){//Level bounds
+        player.x=640-50;
+        player.xv=0;
+    }
+    if (player.x<0){
+        player.x=0;
+        player.xv=0;
+    }
+    if (player.y>640-50){
+        player.y=640-50;
+        player.yv=0;
+    }
+    if (player.y<0){
+        player.y=0;
+        player.yv=0;
+    }
+
+    if (Game.key.pressed(keyBind('RIGHT',1,1)) || Game.key.pressed(keyBind('LEFT',1,1))){}else{
+        player.xv*=0.9;
+    }
+    if (Game.key.pressed(keyBind('UP',1,1)) || Game.key.pressed(keyBind('DOWN',1,1))){}else{
+        player.yv*=0.9;
+    }
+    if (Game.key.pressed(keyBind('SWORDL',1,1)) || Game.key.pressed(keyBind('SWORDR',1,1))){}else{
+        player.rotv*=0.9;
+    }
+    if (player.kbCD>0) player.kbCD--;
+    if (player.bnCD>0) player.bnCD--;
+    if (player.gdCD>0 && !Game.key.pressed(keyBind('GUARD',1,1))) player.gdCD-=weapons[player.weapon].guardSpeed[1];
+    if (player.gdCD<0) player.gdCD=0;
+    
+}
 function tick(){
+    logic();
     draw();
     updateGameSimple();
 
