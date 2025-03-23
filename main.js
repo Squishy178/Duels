@@ -141,8 +141,7 @@ const canvas = document.getElementById("canvas");
 
 //------------------------------------------   PRELOADING -----------------------------
 var loadedImages={};
-function preloadImage(url)
-{
+function preloadImage(url){
     let img=new Image();
     img.src=url;
     loadedImages[url]=img;
@@ -183,6 +182,7 @@ var player={
     kbCD:0,
     bnCD:0,
     gdCD:0,
+    guardDir:1,
 };
 var player2={
     x:0,
@@ -202,7 +202,7 @@ const weapons = [
         collision:[[0,0,100,100]],
         directionChange:1.5,
         visibleStats:{damage:5,speed:5,area:4,control:6,weight:5},
-        guardSpeed:[2,1],
+        guardSpeed:[1,1],
         knockbackGiven:3,
         knockbackTaken:3,
         guardMoveSpeed:0.33,
@@ -347,24 +347,31 @@ function draw(){
         //Player
         ctx.drawImage(getImage('player.png'),player.x,player.y,50,50);
         //Weapon
-        pasteImg(getImage('weapon0.png'),
-        player.x-25+50*Math.cos(player.rot+(player.gdCD*(Math.PI/-10)/10)),
-        player.y-25+50*Math.sin(player.rot+(player.gdCD*(Math.PI/-10)/10)),
+        pasteImg(getImage('weapon'+player.weapon+'.png'),
+        player.x-25+50*Math.cos(player.rot+(player.gdCD*(Math.PI/(-10*player.guardDir))/10)),
+        player.y-25+50*Math.sin(player.rot+(player.gdCD*(Math.PI/(-10*player.guardDir))/10)),
         100,100,
-        player.rot+(player.gdCD*(Math.PI/1.5)/10));
+        player.rot+(player.gdCD*(Math.PI/(1.5*(player.guardDir)))/10));
         
         let movement = 1;
         let swing = 1;
         if (player.gdCD>0){
-            movement /= 3;
-            swing /= 2;
+            movement *= weapons[player.weapon].guardMoveSpeed;
+            swing *= weapons[player.weapon].guardSwingSpeed;
         }
         if (player.kbCD<1){
-            if (Game.key.pressed(keyBind('RIGHT',1,1)) && player.xv<6*movement){player.xv+=movement*0.4*((player.xv<0?1.5:1));}
-            if (Game.key.pressed(keyBind('LEFT',1,1)) && player.xv>-6*movement){player.xv-=movement*0.4*((player.xv>0?1.5:1));}
-
-            if (Game.key.pressed(keyBind('DOWN',1,1))  && player.yv<6*movement) player.yv+=movement*0.4*((player.xv<0?1.5:1));
-            if (Game.key.pressed(keyBind('UP',1,1))  && player.yv>-6*movement) player.yv-=movement*0.4*((player.xv>0?1.5:1));
+            if (Game.key.pressed(keyBind('RIGHT',1,1)) && player.xv<6*movement){
+                player.xv+=movement*0.4*((player.xv<0?1.5:1));
+            }
+            if (Game.key.pressed(keyBind('LEFT',1,1)) && player.xv>-6*movement){
+                player.xv-=movement*0.4*((player.xv>0?1.5:1));
+            }
+            if (Game.key.pressed(keyBind('DOWN',1,1))  && player.yv<6*movement){
+                player.yv+=movement*0.4*((player.xv<0?1.5:1));
+            }
+            if (Game.key.pressed(keyBind('UP',1,1))  && player.yv>-6*movement){
+                player.yv-=movement*0.4*((player.xv>0?1.5:1));
+            }
         }
         player.x += player.xv * Game.deltaTime * 40;
         player.y += player.yv * Game.deltaTime * 40;
@@ -373,16 +380,20 @@ function draw(){
         
 
         if (Game.key.pressed(keyBind('SWORDR',1,1)) && player.rotv<0.25 * swing){
-            if (player.rotv<0) swing *= 2;
+            if (player.rotv<0) swing *= weapons[player.weapon].directionChange;
+            if (player.gdCD==0) player.guardDir=1
             player.rotv+=0.05 * swing;
         }
         if (Game.key.pressed(keyBind('SWORDL',1,1)) && player.rotv>-0.25 * swing){
-            if (player.rotv>0) swing *= 2;
+            if (player.rotv>0) swing *= weapons[player.weapon].directionChange;
+            if (player.gdCD==0) player.guardDir=-1
             player.rotv-=0.05 * swing;
         }
         if (Game.key.pressed(keyBind('GUARD',1,1))){
-            player.gdCD+=2;
-            if (player.gdCD>7) player.gdCD=8;
+            
+            player.gdCD+=weapons[player.weapon].guardSpeed[0];
+            
+            if (player.gdCD>8) player.gdCD=8;
         }
         
         if (Game.collide.rect2D(player.x-25+50*Math.cos(player.rot),player.y-25+50*Math.sin(player.rot),100,100,640,0,1,640)){
@@ -414,6 +425,10 @@ function draw(){
             player.rot-=player.rotv * Game.deltaTime * 40;
             player.rotv=0;
         }
+        if (true){
+            ctx.globalAlpha = 0.3;//Render collision Boxes
+            ctx.fillRect(player.x+25+50*Math.cos(player.rot),player.y+50*Math.sin(player.rot),25,25);
+        }
 
         if (player.x>640-50){//Level bounds
             player.x=640-50;
@@ -443,7 +458,8 @@ function draw(){
         }
         if (player.kbCD>0) player.kbCD--;
         if (player.bnCD>0) player.bnCD--;
-        if (player.gdCD>0 && !Game.key.pressed(keyBind('GUARD',1,1))) player.gdCD--;
+        if (player.gdCD>0 && !Game.key.pressed(keyBind('GUARD',1,1))) player.gdCD-=weapons[player.weapon].guardSpeed[1];
+        if (player.gdCD<0) player.gdCD=0;
         
         
 
