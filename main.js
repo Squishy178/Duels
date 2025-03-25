@@ -153,14 +153,27 @@ function getSfx(url) {
     return loadedSfx[url];
 }
 const preloadImages=[  
-    'player.png',
-    'weapon0.png', 
-    'enemy.png', 
+    'img/player.png',
+    'img/weapon0.png', 
+    'img/weapon1.png',
+    'img/weapon2.png',
+    'img/weapon4.png',
+    'img/enemy.png', 
+    'img/shadow.png',
+    'img/healthbarGreen.png',
+    'img/healthbarRed.png',
+    'img/healthbarWhite.png',
+    'img/costume/costume0-0.png',
+    'img/costume/costume0-1.png',
+    'img/costume/costume1-0.png',
+    'img/costume/costume1-1.png',
+
 ];
 
 
 var loadedSfx={};
 const preloadSfxs=[
+    //Insert SFX
 ];
 function preloadSfx(url){
     let aud=new Audio();
@@ -176,7 +189,7 @@ var player={
     y:320,
     xv:0,
     yv:0,
-    weapon:0,
+    weapon:2,
     skin:0,
     rot:0,
     rotv:0,
@@ -199,10 +212,10 @@ var enemies = [];
 const weapons = [
     {
         name:'Sword',
-        maxSpeed:0.25,
-        speed:0.05,//Collision boxes. Distance from player, Box size, and if they hurt. 
-        collision:[[50,35,true],[70,20,true],[90,18,true]],
-        directionChange:1.5,
+        maxSpeed:0.17,
+        speed:0.015,//Collision boxes. Distance from player, Box size, and if they hurt. 
+        collision:[[50,35,false],[70,20,true],[90,18,true]],
+        directionChange:2,
         visibleStats:{damage:5,speed:5,area:4,control:6,weight:5},
         guardSpeed:[1,1],
         knockbackGiven:1,
@@ -216,11 +229,11 @@ const weapons = [
     {
         name:'Knife',
         maxSpeed:0.3,
-        speed:0.1,
-        collision:[[0,0,100,100]],
+        speed:0.03,
+        collision:[[50,30,false],[75,15,true]],
         directionChange:4,
         visibleStats:{damage:7,speed:7,area:2,control:6,weight:2},
-        guardSpeed:[2.5,2],
+        guardSpeed:[2,2],
         knockbackGiven:0.4,
         knockbackTaken:1.2,
         guardMoveSpeed:0.5,
@@ -231,9 +244,9 @@ const weapons = [
     },
     {
         name:'Hammer',
-        maxSpeed:0.35,
-        speed:0.04,
-        collision:[[0,0,100,100]],
+        maxSpeed:0.25,
+        speed:0.01,
+        collision:[[45,15,false],[60,15,false],[85,40,true]],
         directionChange:0.5,
         visibleStats:{damage:8,speed:6,area:8,control:1,weight:9},
         guardSpeed:[0.5,0.25],
@@ -262,20 +275,20 @@ const weapons = [
         damage:1.5,
     },
     {
-        name:'Dual',//Needs update
-        maxSpeed:0.4,
-        speed:0.09,
-        collision:[[0,0,100,100]],
-        directionChange:0.5,
-        visibleStats:{damage:8,speed:6,area:8,control:1,weight:9},
-        guardSpeed:[1,0.5],
-        knockbackGiven:8,
-        knockbackTaken:2,
-        guardMoveSpeed:0.2,
-        guardSwingSpeed:0.33,
-        parryFrame:[3],
-        guardReduction:0.35,
-        damage:8,
+        name:'Double',//Needs update
+        maxSpeed:0.25,
+        speed:0.01,
+        collision:[[50,35,false],[70,20,true],[90,18,true],[-50,35,false],[-70,20,true],[90,18,true]],
+        directionChange:3,
+        visibleStats:{damage:5,speed:5,area:4,control:6,weight:5},
+        guardSpeed:[0.75,0.75],
+        knockbackGiven:1,
+        knockbackTaken:0.2,
+        guardMoveSpeed:0.33,
+        guardSwingSpeed:0.5,
+        parryFrame:[4],
+        guardReduction:0.65,
+        damage:3.5,
     },
     {
         name:'Flail',//Needs update
@@ -376,29 +389,61 @@ function draw(){
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.globalAlpha = 1;
         ctx.font = "20px serif";
+        ctx.globalAlpha=0.3;
+        centerImage(getImage('img/shadow.png'),player.x,player.y+22,50,50);
+        ctx.globalAlpha=1;
         
         for (var i = 0; i < enemies.length; i++){
-            centerImage(getImage('enemy.png'),enemies[i].x,enemies[i].y,50,50);
-            pasteImg(getImage('weapon'+enemies[i].weapon+'.png'),
+            ctx.globalAlpha=0.3;
+            centerImage(getImage('img/shadow.png'),enemies[i].x,enemies[i].y+22,50,50);
+            ctx.globalAlpha=1;
+            centerImage(getImage('img/costume/costume1-0.png'),enemies[i].x,enemies[i].y,50,50);
+            centerImage(getImage('img/costume/costume1-1.png'),
+                enemies[i].x+(10*Math.cos((Math.PI/-2)+Game.directionFrom(enemies[i].x,enemies[i].y,player.x,player.y))),
+                enemies[i].y+(10*Math.sin((Math.PI/-2)+Game.directionFrom(enemies[i].x,enemies[i].y,player.x,player.y))),
+                50,50);
+
+            pasteImg(getImage('img/weapon'+enemies[i].weapon+'.png'),
             enemies[i].x-25+50*Math.cos(enemies[i].rot),
             enemies[i].y-25+50*Math.sin(enemies[i].rot),
             100,100,
             enemies[i].rot);
+            
         }
         //Player
-        centerImage(getImage('player.png'),player.x,player.y,50,50);
+        
+        //Math.max(10,(Math.sqrt(((player.x-enemies[0].x)^2)+((player.y-enemies[0].y)^2))));
+        centerImage(getImage('img/costume/costume0-0.png'),player.x,player.y,50,50);
+        centerImage(getImage('img/costume/costume0-1.png'),
+            player.x+(10*Math.cos((Math.PI/-2)+Game.directionFrom(player.x,player.y,enemies[0].x,enemies[0].y))),
+            player.y+(10*Math.sin((Math.PI/-2)+Game.directionFrom(player.x,player.y,enemies[0].x,enemies[0].y))),
+            50,50);
         //Weapon
-        pasteImg(getImage('weapon'+player.weapon+'.png'),
+        pasteImg(getImage('img/weapon'+player.weapon+'.png'),
         player.x-25+50*Math.cos(player.rot+(player.gdCD*(Math.PI/(-10*player.guardDir))/10)),
         player.y-25+50*Math.sin(player.rot+(player.gdCD*(Math.PI/(-10*player.guardDir))/10)),
         100,100,
         player.rot+(player.gdCD*(Math.PI/(1.5*(player.guardDir)))/10));
-        if (false){
+        if (player.weapon==4){
+            pasteImg(getImage('img/weapon'+player.weapon+'.png'),
+                player.x-25+50*Math.cos(Math.PI+player.rot+(player.gdCD*(Math.PI/(-10*player.guardDir))/10)),
+                player.y-25+50*Math.sin(Math.PI+player.rot+(player.gdCD*(Math.PI/(-10*player.guardDir))/10)),
+                100,100,
+                Math.PI+player.rot+(player.gdCD*(Math.PI/(1.5*(player.guardDir)))/10));
+        }
+        if (false){//Draw weapon collision. Debug purposes
+            for (var i = 0; i < weapons[player.weapon].collision.length; i++){
+                let weapon = weapons[player.weapon].collision[i];
+                ctx.globalAlpha = 0.4;
+                ctx.fillRect(player.x-(weapon[1]/2)+(weapon[0]*Math.cos(player.rot)),player.y-(weapon[1]/2)+(weapon[0]*Math.sin(player.rot)),weapon[1],weapon[1]);
+            }
             
-            ctx.globalAlpha = 0.3;//Render collision Boxes
-            ctx.fillRect(player.x-15+(50*Math.cos(player.rot)),player.y-15+(50*Math.sin(player.rot)),30,30);
-            ctx.fillRect(player.x-10+(70*Math.cos(player.rot)),player.y-10+(70*Math.sin(player.rot)),20,20);
-            ctx.fillRect(player.x-10+(90*Math.cos(player.rot)),player.y-10+(90*Math.sin(player.rot)),20,20);
+            
+        }
+        ctx.globalAlpha=1;
+        centerImage(getImage('img/healthbarGreen.png'),player.x,player.y-40,60,60);
+        for (var i = 0; i < enemies.length; i++){
+            centerImage(getImage('img/healthbarGreen.png'),enemies[i].x,enemies[i].y-40,60,60);
         }
         
 
