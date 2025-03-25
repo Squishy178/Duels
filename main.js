@@ -200,13 +200,13 @@ const weapons = [
     {
         name:'Sword',
         maxSpeed:0.25,
-        speed:0.05,
-        collision:[[0,0,100,100]],
+        speed:0.05,//Collision boxes. Distance from player, Box size, and if they hurt. 
+        collision:[[50,35,true],[70,20,true],[90,18,true]],
         directionChange:1.5,
         visibleStats:{damage:5,speed:5,area:4,control:6,weight:5},
         guardSpeed:[1,1],
-        knockbackGiven:3,
-        knockbackTaken:3,
+        knockbackGiven:1,
+        knockbackTaken:1,
         guardMoveSpeed:0.33,
         guardSwingSpeed:0.5,
         parryFrame:[4],
@@ -221,8 +221,8 @@ const weapons = [
         directionChange:4,
         visibleStats:{damage:7,speed:7,area:2,control:6,weight:2},
         guardSpeed:[2.5,2],
-        knockbackGiven:2,
-        knockbackTaken:6,
+        knockbackGiven:0.4,
+        knockbackTaken:1.2,
         guardMoveSpeed:0.5,
         guardSwingSpeed:0.7,
         parryFrame:[4],
@@ -231,25 +231,38 @@ const weapons = [
     },
     {
         name:'Hammer',
-        maxSpeed:0.5,
+        maxSpeed:0.35,
         speed:0.04,
         collision:[[0,0,100,100]],
         directionChange:0.5,
         visibleStats:{damage:8,speed:6,area:8,control:1,weight:9},
-        guardSpeed:[1,0.5],
-        knockbackGiven:8,
-        knockbackTaken:2,
+        guardSpeed:[0.5,0.25],
+        knockbackGiven:2,
+        knockbackTaken:0.6,
         guardMoveSpeed:0.2,
         guardSwingSpeed:0.33,
         parryFrame:[3],
-        guardReduction:0.35,
+        guardReduction:0.4,
         damage:8,
     },
     {
         name:'Shield',
+        maxSpeed:0.2,
+        speed:0.04,
+        collision:[[0,0,100,100]],
+        directionChange:0.5,
+        visibleStats:{damage:1,speed:3,area:8,control:5,weight:9},
+        guardSpeed:[2,2],
+        knockbackGiven:0.8,
+        knockbackTaken:0.2,
+        guardMoveSpeed:0.2,
+        guardSwingSpeed:0.6,
+        parryFrame:[2,4],
+        guardReduction:0.15,
+        damage:1.5,
     },
     {
-        name:'Dual',
+        name:'Dual',//Needs update
         maxSpeed:0.4,
         speed:0.09,
         collision:[[0,0,100,100]],
@@ -265,7 +278,7 @@ const weapons = [
         damage:8,
     },
     {
-        name:'Flail',
+        name:'Flail',//Needs update
         maxSpeed:0.4,
         speed:0.09,
         collision:[[0,0,100,100]],
@@ -322,9 +335,23 @@ function keyBind(key,maxPlayer,player){
     }
 }
 function newEnemy(){
-    enemies.push({x:400,y:500,weapon:0,id:0,xv:0,yv:0,rot:0,rotv:0,});
+    enemies.push({x:400,y:500,weapon:0,id:0,xv:0,yv:0,rot:0,rotv:0,ai:[0,0],});
 }
 newEnemy();
+function playerWeaponCollision(x,y,sx,sy,hurt){
+    for (var i = 0; i < weapons[player.weapon].collision.length; i++){
+        let weapon = weapons[player.weapon].collision;
+
+        if (Game.collide.rect2D(
+            player.x-(weapon[i][1]/2)+weapon[i][0]*Math.cos(player.rot),
+            player.y-(weapon[i][1]/2)+weapon[i][0]*Math.sin(player.rot),
+            weapon[i][1],weapon[i][1],
+            x,y,
+            sx,sy)
+        && (weapon[i][2] || !hurt)) return true;
+    }
+    return false
+}
 
 //---------------------------------------------------- DRAW -----------------------------------
 function draw(){
@@ -333,35 +360,46 @@ function draw(){
         const ctx = canvas.getContext("2d");
         function pasteImg(image,x,y,sx,sy,rotation){
             ctx.save();
-            ctx.translate(x+(sx/2), y+(sy/2)); // translate to rectangle center
+            ctx.translate(x+(sx/4), y+(sy/4)); // translate to rectangle center
             ctx.rotate(rotation);
 
-            ctx.translate(-x-(sx/2),-y-(sy/2));
-            ctx.drawImage(image,x, y,sx,sy);
+            ctx.translate(-x,-y);
+            centerImage(image,x, y,sx,sy);
             ctx.restore();
   
             
         }
+        function centerImage(image,x,y,sx,sy){
+            ctx.drawImage(image,x-(sx/2),y-(sy/2),sx,sy);
+
+        }
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.globalAlpha = 1;
         ctx.font = "20px serif";
-        ctx.globalAlpha=1;
-        //Player
-        ctx.drawImage(getImage('player.png'),player.x,player.y,50,50);
+        
         for (var i = 0; i < enemies.length; i++){
-            ctx.drawImage(getImage('enemy.png'),enemies[i].x,enemies[i].y,50,50);
+            centerImage(getImage('enemy.png'),enemies[i].x,enemies[i].y,50,50);
             pasteImg(getImage('weapon'+enemies[i].weapon+'.png'),
             enemies[i].x-25+50*Math.cos(enemies[i].rot),
             enemies[i].y-25+50*Math.sin(enemies[i].rot),
             100,100,
             enemies[i].rot);
         }
+        //Player
+        centerImage(getImage('player.png'),player.x,player.y,50,50);
         //Weapon
         pasteImg(getImage('weapon'+player.weapon+'.png'),
         player.x-25+50*Math.cos(player.rot+(player.gdCD*(Math.PI/(-10*player.guardDir))/10)),
         player.y-25+50*Math.sin(player.rot+(player.gdCD*(Math.PI/(-10*player.guardDir))/10)),
         100,100,
         player.rot+(player.gdCD*(Math.PI/(1.5*(player.guardDir)))/10));
+        if (false){
+            
+            ctx.globalAlpha = 0.3;//Render collision Boxes
+            ctx.fillRect(player.x-15+(50*Math.cos(player.rot)),player.y-15+(50*Math.sin(player.rot)),30,30);
+            ctx.fillRect(player.x-10+(70*Math.cos(player.rot)),player.y-10+(70*Math.sin(player.rot)),20,20);
+            ctx.fillRect(player.x-10+(90*Math.cos(player.rot)),player.y-10+(90*Math.sin(player.rot)),20,20);
+        }
         
 
     }
@@ -410,7 +448,7 @@ function logic(){
         if (player.gdCD>8) player.gdCD=8;
     }
     
-    if (Game.collide.rect2D(player.x-25+50*Math.cos(player.rot),player.y-25+50*Math.sin(player.rot),100,100,640,0,1,640)){
+    if (playerWeaponCollision(640,0,1,640,false)){
         player.x-=player.xv * Game.deltaTime * 40;
         player.xv=-10*(0.2+Math.abs(player.rotv));
         player.kbCD=10;
@@ -418,48 +456,62 @@ function logic(){
         player.rotv=0;
     }
 
-    if (Game.collide.rect2D(player.x-25+50*Math.cos(player.rot),player.y-25+50*Math.sin(player.rot),100,100,0,0,1,640)){
+    if (playerWeaponCollision(0,0,1,640,false)){
         player.x-=player.xv * Game.deltaTime * 40;
         player.xv=10*(Math.abs(player.rotv));
         player.kbCD=10;
         player.rot-=player.rotv * Game.deltaTime * 40;
         player.rotv=0;
     }
-    if (Game.collide.rect2D(player.x-25+50*Math.cos(player.rot),player.y-25+50*Math.sin(player.rot),100,100,0,0,640,1)){
+    if (playerWeaponCollision(0,0,640,1,false)){
         player.y-=player.yv * Game.deltaTime * 40;
         player.yv=10*(Math.abs(player.rotv));
         player.kbCD=10;
         player.rot-=player.rotv * Game.deltaTime * 40;
         player.rotv=0;
     }
-    if (Game.collide.rect2D(player.x-25+50*Math.cos(player.rot),player.y-25+50*Math.sin(player.rot),100,100,0,639,640,640)){
+    if (playerWeaponCollision(0,640,640,1,false)){
         player.y-=player.yv * Game.deltaTime * 40;
         player.yv=-10*(Math.abs(player.rotv));
         player.kbCD=10;
         player.rot-=player.rotv * Game.deltaTime * 40;
         player.rotv=0;
     }
-    if (false){
-        ctx.globalAlpha = 0.3;//Render collision Boxes
-        ctx.fillRect(player.x+25+50*Math.cos(player.rot),player.y+50*Math.sin(player.rot),25,25);
+    
+
+    if (player.x>640-25){//Level bounds
+        player.x=640-25;
+        player.xv=0;
+    }
+    if (player.x<25){
+        player.x=25;
+        player.xv=0;
+    }
+    if (player.y>640-25){
+        player.y=640-25;
+        player.yv=0;
+    }
+    if (player.y<25){
+        player.y=25;
+        player.yv=0;
+    }
+    for (var i = 0; i < enemies.length; i++){
+        for (var ii = 0; ii < weapons[enemies[i].weapon].collision.length; ii++){
+            let weapon = weapons[enemies[i].weapon].collision;
+            if (playerWeaponCollision(
+                enemies[i].x-(weapon[ii][1]/2)+weapon[ii][0]*Math.cos(enemies[i].rot),
+                enemies[i].y-(weapon[ii][1]/2)+weapon[ii][0]*Math.sin(enemies[i].rot),
+                weapon[ii][1],weapon[ii][1])){
+                    player.rot-=player.rotv*1.11;
+                    player.rotv*=-1;
+                    
+                }
+
+        
+        }
     }
 
-    if (player.x>640-50){//Level bounds
-        player.x=640-50;
-        player.xv=0;
-    }
-    if (player.x<0){
-        player.x=0;
-        player.xv=0;
-    }
-    if (player.y>640-50){
-        player.y=640-50;
-        player.yv=0;
-    }
-    if (player.y<0){
-        player.y=0;
-        player.yv=0;
-    }
+
 
     if (Game.key.pressed(keyBind('RIGHT',1,1)) || Game.key.pressed(keyBind('LEFT',1,1))){}else{
         player.xv*=0.9;
