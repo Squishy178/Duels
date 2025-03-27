@@ -11,7 +11,7 @@ if (true){
         sample:{},
     };
     var prevDelta=Date.now();
-    Game.deltaTime=Date.now();
+    Game.deltaTime=0;
 
     Game.key.array.down=[];//Which keys are held down at the moment. Would not call this function unless you know all the keycodes.
     Game.key.array.click=[];
@@ -462,7 +462,7 @@ function draw(){
         ctx.globalAlpha=1;
         
         for (var i = 0; i < enemies.length; i++){
-            ctx.globalAlpha=0.3;
+            ctx.globalAlpha=0.3;//Render enemy
             centerImage(getImage('img/shadow.png'),enemies[i].x,enemies[i].y+22,50,50);
             ctx.globalAlpha=1;
             centerImage(getImage('img/costume/costume1-0.png'),enemies[i].x,enemies[i].y,50,50);
@@ -470,7 +470,7 @@ function draw(){
                 enemies[i].x+(8*Math.cos((Math.PI/-2)+Game.directionFrom(enemies[i].x,enemies[i].y,player.x,player.y))),
                 enemies[i].y+(8*Math.sin((Math.PI/-2)+Game.directionFrom(enemies[i].x,enemies[i].y,player.x,player.y))),
                 50,50);
-
+            //Render enemy weapon
             pasteImg(getImage('img/weapon'+enemies[i].weapon+'.png'),
             enemies[i].x-(150/4)+50*Math.cos(enemies[i].rot),
             enemies[i].y-(150/4)+50*Math.sin(enemies[i].rot),
@@ -478,6 +478,7 @@ function draw(){
             enemies[i].rot);
             
         }
+        //document.querySelector('#test').innerHTML=player.rot+', '+enemies[0].rot;
         //Player
         
         //Math.max(10,(Math.sqrt(((player.x-enemies[0].x)^2)+((player.y-enemies[0].y)^2))));
@@ -531,16 +532,20 @@ function draw(){
         for (var i = 0; i < enemies.length; i++){
             centerImage(getImage('img/healthbarGreen.png'),enemies[i].x,enemies[i].y-40,60,60);
         }
-        ctx.drawImage(
+        if (player.health<=0){
+            centerImage(getImage('img/healthbarRed.png'),player.x,player.y-40,60,60);
+        }else{
+            ctx.drawImage(
             getImage('img/healthbarRed.png'),
-            (540*(player.health/player.maxHealth)),
+            54+(540*(player.health/player.maxHealth)),
             0,
             640,
             640,
-            player.x-30+54*(player.health/player.maxHealth),
+            player.x-24+50*(player.health/player.maxHealth),
             player.y-40-30,
             60,
             60);
+        }
         
 
     }
@@ -657,16 +662,47 @@ function logic(){
         player.yv=0;
     }
     for (var i = 0; i < enemies.length; i++){
+        enemies[i].x += enemies[i].xv * Game.deltaTime * 40;
+        enemies[i].y += enemies[i].yv * Game.deltaTime * 40;
+        enemies[i].rot += enemies[i].rotv * Game.deltaTime * 40;
         for (var ii = 0; ii < weapons[enemies[i].weapon].collision.length; ii++){
             let weapon = weapons[enemies[i].weapon].collision;
             if (playerWeaponCollision(
                 enemies[i].x-(weapon[ii][1]/2)+weapon[ii][0]*Math.cos(enemies[i].rot),
                 enemies[i].y-(weapon[ii][1]/2)+weapon[ii][0]*Math.sin(enemies[i].rot),
                 weapon[ii][1],weapon[ii][1]))
-            {
-                player.rot-=player.rotv*1.11;
-                player.rotv*=-1;
-                player.blockCD=10;
+            {//Weapon Collision
+                player.blockCD=15;
+                enemies[i].blockCD=15;
+                player.rot-=player.rotv;
+                enemies[i].rot-=enemies[i].rotv;
+
+                let knockback = weapons[player.weapon].knockbackTaken*weapons[enemies[i].weapon].knockbackGiven;
+                player.rotv*=-knockback;//Player
+
+                if (player.rotv>0){
+                    player.xv=knockback*25*Math.abs(player.rotv+enemies[i].rotv)*Math.cos(player.rot-Math.PI/2);
+                    player.yv=knockback*25*Math.abs(player.rotv+enemies[i].rotv)*Math.sin(player.rot-Math.PI/2);
+ 
+                }else{
+                    player.xv=knockback*25*Math.abs(player.rotv+enemies[i].rotv)*Math.cos(player.rot+Math.PI/2);
+                    player.yv=knockback*25*Math.abs(player.rotv+enemies[i].rotv)*Math.sin(player.rot+Math.PI/2);
+                }
+
+                knockback = weapons[player.weapon].knockbackGiven*weapons[enemies[i].weapon].knockbackTaken;
+                enemies[i].rotv*=-knockback;//Enemy
+
+                if (enemies[i].rotv>0){
+                    enemies[i].xv-=knockback*25*Math.abs(player.rotv+enemies[i].rotv)*Math.cos(enemies[i].rot-Math.PI/2);
+                    enemies[i].yv-=knockback*25*Math.abs(player.rotv+enemies[i].rotv)*Math.sin(enemies[i].rot-Math.PI/2);
+ 
+                }else{
+                    enemies[i].xv-=knockback*25*Math.abs(player.rotv+enemies[i].rotv)*Math.cos(enemies[i].rot+Math.PI/2);
+                    enemies[i].yv-=knockback*25*Math.abs(player.rotv+enemies[i].rotv)*Math.sin(enemies[i].rot+Math.PI/2);
+                }
+
+                
+                enemies[i].rotv*=-1*weapons[enemies[i].weapon].knockbackTaken;
                     
             }else if (Game.collide.rect2D(
                 enemies[i].x-(weapon[ii][1]/2)+weapon[ii][0]*Math.cos(enemies[i].rot),
@@ -684,6 +720,25 @@ function logic(){
                 }
             }
 
+        }
+        enemies[i].xv*=0.9;
+        enemies[i].yv*=0.9;
+        enemies[i].rotv*=0.9;
+        if (enemies[i].x>640-25){//Level bounds
+            enemies[i].x=640-25;
+            enemies[i].xv=0;
+        }
+        if (enemies[i].x<25){
+            enemies[i].x=25;
+            enemies[i].xv=0;
+        }
+        if (enemies[i].y>640-25){
+            enemies[i].y=640-25;
+            enemies[i].yv=0;
+        }
+        if (enemies[i].y<25){
+            enemies[i].y=25;
+            enemies[i].yv=0;
         }
     }
 
