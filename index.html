@@ -11,29 +11,47 @@
         
 
         image-rendering: optimizeSpeed;
-        border:1px solid lightgray;
+        border:0px solid lightgray;
         background-color: white;
-
     }
     .bg{
         background-color: black;
+        overflow-x:hidden;
+        overflow-y:hidden;
     }
     .patch{
-        color:white
+        color:white;
+        font-size:12px;
+        margin:2px;
     }
 </style>
 <body class="bg">
     
     <canvas id="canvas" class="canvas" height="640px" width="640px" style="position:absolute;top:0px;left:0px;">Games</canvas>
-    <div style="position:absolute;top:640px;left:20px;">
-        <p id = "test" class="patch">0.2 Patch Notes: (Will be removed later and placed inside the actual game)</p>
-        <p class="patch">- Fixed Healthbars</p>
-        <p class="patch">- Added much Better weapon collision. More work needed but better!</p>
-        <p class="patch">- AI, collision improvements and face expressions planned for next patch</p>
+    <div style="position:absolute;top:645px;left:20px;">
+        <p id = "test" class="patch">Dev Note;</p>
+        <p class="patch">This is a game I am making called "Duels." I think it is pretty neat</p>
+        <p class="patch">----- Things that are bugged atm ------</p>
+        <p class="patch">Weapon collision, enemy collision, wall collision, jabbing, guarding hitbox,</p>
+        <p class="patch">parrying, "jab/guard boosting", blinking, that one weird bug where you can guard farther than usual</p>
         <button onclick="if (player.weapon<4){player.weapon++}else{player.weapon=0}">Change Weapons</button>
+    </div>
+    <div style="position:absolute;top:20px;left:650px;">
+        <p id = "test" class="patch">0.4 Patch Notes: (Will be removed later and placed inside the actual game)</p>
+        <p class="patch">- Recoded the art and collision system for weapons, so I can have weapons that change visuals, and weapons with asymetrical hitboxes</p>
+        <p class="patch">- Started important game economy importances. A lot of internal work being done.</p>
+        <p class="patch">- Character Now blink</p>
+        <p class="patch">- Added a nice Background and loading screen, assuming your computer takes a while to load things</p>
+        <p class="patch">- Added support for costumes, achievements and more weapons.</p>
+        <p class="patch">- Menu started work on. I will do something fun for that trust guys</p>
+        <p class="patch">- Collision fixed. Mostly</p>
+        <p class="patch">- Bugs fixed, and guarding slows on the transition frames better. Feels a lot better to play</p>
+        <p class="patch">- Added better shadows. Blurred and more aligned with the camera.</p>
     </div>
 
 </body>
-
-<script src="main.js"></script><!-- Main script -->
+<!-- <script src="server.js" defer></script> -->
+<script src="weapons.js" defer></script>
+<script src="costumes.js" defer></script>
+<script src="main.js" defer></script><!-- Main script -->
 </html>

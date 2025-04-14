@@ -1,6 +1,6 @@
 if (true){
     var keyCodesToKeys={//I would not touch this. I would also advise you not to use the control.
-        "A":65,"B":66,"C":67,'D':68,'E':69,'F':70,'G':71,'H':72,'I':73,'J':74,'K':75,'L':76,'M':77,'N':78,'O':79,'P':80,'Q':81,'R':82,'S':83,'T':84,'U':85,'V':86,'W':87,'X':88,'Y':89,'Z':90,'0':96,'1':97,'2':98,'3':99,'4':100,'5':101,'6':102,'7':103,'8':104,'9':105,'SPACE':32,'ENTER':13,'SHIFT':16,'CONTROL':17,'ALT':18,'ESCAPE':27,'DELETE':46,'LEFT':37,'UP':38,'RIGHT':39,'DOWN':40,'BACKSPACE':8,'TAB':9,'F1':112,'F2':113,'F3':114,'F4':115,'F5':116,'F6':117,'F7':118,F8:'119',F9:120,'F10':121,'F11':122,'F12':123
+        "A":65,"B":66,"C":67,'D':68,'E':69,'F':70,'G':71,'H':72,'I':73,'J':74,'K':75,'L':76,'M':77,'N':78,'O':79,'P':80,'Q':81,'R':82,'S':83,'T':84,'U':85,'V':86,'W':87,'X':88,'Y':89,'Z':90,'0':96,'1':97,'2':98,'3':99,'4':100,'5':101,'6':102,'7':103,'8':104,'9':105,'SPACE':32,'ENTER':13,'SHIFT':16,'CONTROL':17,'ALT':18,'ESCAPE':27,'DELETE':46,'LEFT':37,'UP':38,'RIGHT':39,'DOWN':40,'BACKSPACE':8,'TAB':9,'F1':112,'F2':113,'F3':114,'F4':115,'F5':116,'F6':117,'F7':118,'F8':119,'F9':120,'F10':121,'F11':122,'F12':123
     }
     var particles=[];
     var Game={
@@ -133,7 +133,7 @@ if (true){
         Game.mouse.click=false;
         Game.deltaTime=(Date.now()-prevDelta)/1000;
         prevDelta=Date.now();
-        // document.querySelector('#test').innerHTML=Game.deltaTime;
+        
     }
 }
 const canvas = document.getElementById("canvas");
@@ -162,6 +162,8 @@ const preloadImages=[
     'img/weapon5.png',
     'img/weapon6.png',
     'img/weapon7.png',
+    'img/weapon8.png',
+
     'img/enemy.png', 
     'img/shadow.png',
     'img/healthbarGreen.png',
@@ -169,20 +171,30 @@ const preloadImages=[
     'img/healthbarWhite.png',
     'img/costume/costume0-0.png',
     'img/costume/costume0-1.png',
+    'img/costume/costume0-2.png',
+    'img/costume/costume0-3.png',
+    'img/costume/costume0-4.png',
+    'img/costume/costume0-5.png',
+    'img/costume/costume0-6.png',
+
     'img/costume/costume1-0.png',
     'img/costume/costume1-1.png',
-
+    'img/background.png',
+    'img/border.png',
+    'img/menu/island0.png',
 ];
+
 var levelState = {
     score:0,
     stage:0,
     time:0,
     freezeFrame:0,
+    state:'play',
 }
 
 var loadedSfx={};
 const preloadSfxs=[
-    //Insert SFX
+    'sfx/menu.mp3'
 ];
 function preloadSfx(url){
     let aud=new Audio();
@@ -192,6 +204,8 @@ function preloadSfx(url){
 function playSfx(url) {
     loadedSfx[url].play();
 }
+function choose(arr) {return arr[Math.floor(Math.random()*arr.length)];}
+
 
 var player={
     x:320,
@@ -210,174 +224,132 @@ var player={
     health:25,
     maxHealth:25,
     iframe:0,
+    blink:120,
+    jabCD:0,
+
 };
-var player2={
-    x:0,
-    y:0,
-    xv:0,
-    yv:0,
-    weapon:0,
-    skin:0,
-    rot:0,
-    rotv:0,
-};
+
 var enemies = [];
-//Sword, Knife, Hammer, *Flail*, Double, Shield, *Whip*, Spear, *Gun*
+//Specifications for costumes;
+//Rarity 0: Little change/small item/color swap   20 tokens
+//1: Major item or something  40 tokens
+//2: Complete body overhaul   80 tokens
+//3: Only the most premium!   200 tokens
 
-//Sword: Medium Stats  ***
-//Knife: Fast and dangerous  ***
-//Hammer: Heavy and slow  ***
+var saveData={
+    tokens:10,
+    gems:10,
+    boxes:{
+        normal:1,
+        big:0,
+        large:0,
+        grand:0
+    },
+    costumes:[0],
+    weapons:[
+        {
+            unlocked:true,
+            v1:false,
+            v2:false,
+            v3:false,
+        },
+        {
+            unlocked:false,
+            v1:false,
+            v2:false,
+            v3:false,
+        },
+        {
+            unlocked:false,
+            v1:false,
+            v2:false,
+            v3:false,
+        },
+    ],
+    lastReward:10,
 
-//Double: bladestorm!!  ***
-//Shield: Excellent Guarding  ***
-//Spear: Tiny point of great damage  ***
+}
+//Normal box: 2 rolls
+//Big Box: 4 rolls
+//Large box: 8 rolls
+//Grand box: 16 rolls
 
-//<> Flail: Delayed attacks
-//<> Whip: Dynamic range and damage
-//<> Pistol: Insane damage and Range  ***
+//Gem conversion rate: (Discounts)
+//1 gem -> 3 tokens
+//2 gems -> 1 Normal box
+//3 gems -> 1 Big box
+//7 gems -> 1 Large box
+//13 gems -> 1 Grand box
 
-//<> Scythe: One side damage, One side guarding
-//Axe: Lots of damage, but prone to attacks  ***
-//Lance: Lots of damage when stabbing and high pushback  ***
-const weapons = [
-    {
-        name:'Sword',
-        maxSpeed:0.17,
-        speed:0.015,//Collision boxes. Distance from player, Box size, and if they hurt. 
-        collision:[[50,30,false],[70,20,true],[90,18,true]],
-        directionChange:2,
-        visibleStats:{damage:5,speed:5,area:4,control:6,weight:5,guard:6},
-        guardSpeed:[1,1],
-        knockbackGiven:1,
-        knockbackTaken:1,
-        guardMoveSpeed:0.33,
-        guardSwingSpeed:0.5,
-        parryFrame:[4],
-        guardReduction:0.5,
-        damage:5,
-        variants:[],
-    },
-    {
-        name:'Knife',
-        maxSpeed:0.2,
-        speed:0.03,
-        collision:[[50,30,false],[75,15,true]],
-        directionChange:4,
-        visibleStats:{damage:7,speed:7,area:2,control:6,weight:2,guard:3},
-        guardSpeed:[2,2],
-        knockbackGiven:0.4,
-        knockbackTaken:1.2,
-        guardMoveSpeed:0.5,
-        guardSwingSpeed:0.7,
-        parryFrame:[4],
-        guardReduction:0.7,
-        damage:7,
-        variants:[],
-    },
-    {
-        name:'Hammer',
-        maxSpeed:0.25,
-        speed:0.01,
-        collision:[[45,15,false],[60,15,false],[85,40,true]],
-        directionChange:0.5,
-        visibleStats:{damage:8,speed:6,area:8,control:1,weight:9,guard:2},
-        guardSpeed:[0.5,0.25],
-        knockbackGiven:2,
-        knockbackTaken:0.6,
-        guardMoveSpeed:0.2,
-        guardSwingSpeed:0.33,
-        parryFrame:[3],
-        guardReduction:0.4,
-        damage:8,
-    },
-    {
-        name:'Shield',
-        maxSpeed:0.19,
-        speed:0.04,
-        collision:[[50,40,true]],
-        directionChange:0.5,
-        visibleStats:{damage:1,speed:7,area:2,control:7,weight:8,guard:10},
-        guardSpeed:[2,2],
-        knockbackGiven:0.8,
-        knockbackTaken:0.1,
-        guardMoveSpeed:1,
-        guardSwingSpeed:1.25,
-        parryFrame:[2,4],
-        guardReduction:3,
-        damage:1.5,
-        variants:[],
-    },
-    {
-        name:'Double',
-        maxSpeed:0.25,
-        speed:0.01,
-        collision:[[50,35,false],[70,20,true],[90,18,true],[-50,35,false],[-70,20,true],[90,18,true]],
-        directionChange:0.4,
-        visibleStats:{damage:5,speed:5,area:4,control:6,weight:5,guard:8},
-        guardSpeed:[0.75,0.75],
-        knockbackGiven:1,
-        knockbackTaken:0.2,
-        guardMoveSpeed:0.33,
-        guardSwingSpeed:0.5,
-        parryFrame:[4],
-        guardReduction:0.65,
-        damage:3,
-        variants:[],
-    },
-    {
-        name:'Lance',
-        maxSpeed:0.1,
-        speed:0.005,
-        collision:[[50,35,false],[70,20,true],[90,18,true],[110,15,true]],
-        directionChange:0.5,
-        visibleStats:{damage:8,speed:2,area:8,control:3,weight:9,guard:3},
-        guardSpeed:[1,0.5],
-        knockbackGiven:8,
-        knockbackTaken:2,
-        guardMoveSpeed:0.2,
-        guardSwingSpeed:0.33,
-        parryFrame:[3],
-        guardReduction:0.35,
-        damage:8,
-        variants:[],
-    },
-    {
-        name:'Axe',//Needs update
-        maxSpeed:0.15,
-        speed:0.015,
-        collision:[[45,15,false],[60,15,false],[80,40,true]],
-        directionChange:0.5,
-        visibleStats:{damage:9,speed:4,area:6,control:3,weight:7,guard:5},
-        guardSpeed:[1,0.75],
-        knockbackGiven:8,
-        knockbackTaken:2,
-        guardMoveSpeed:0.2,
-        guardSwingSpeed:0.33,
-        parryFrame:[3],
-        guardReduction:0.35,
-        damage:9,
-        variants:[],
-    },
-    {
-        name:'Spear',//Needs update
-        maxSpeed:0.1,
-        speed:0.01,
-        collision:[[45,15,false],[60,15,false],[75,15,false],[100,20,true],[115,15,true]],
-        directionChange:0.5,
-        visibleStats:{damage:6,speed:5,area:2,control:4,weight:2,guard:4},
-        guardSpeed:[1.5,0.5],
-        knockbackGiven:2,
-        knockbackTaken:0.6,
-        guardMoveSpeed:0.2,
-        guardSwingSpeed:0.33,
-        parryFrame:[3],
-        guardReduction:0.4,
-        damage:6,
-    },
+//Rarity weapon cost:
+//120 tokens -> common       0
+//240 tokens -> rare         1
+//480 tokens -> epic         2
+//1000 tokens -> legendary   3
 
 
+function rollLoot(luck){
+    let lucky = luck*(1+Math.log(saveData.lastReward/10))
+    let rarity = 0;//Common
+    if (Math.random()<0.275*lucky) rarity = 1;//Rare
+    if (Math.random()<0.10*lucky && rarity == 0) rarity = 2;//Epic
+    if (Math.random()<0.025*lucky && rarity == 0) rarity = 3;//Legendary
+    if (Math.random()<0.005*lucky && rarity == 0) rarity = 4;//Prismatic (EXTREMELY RARE!)
 
-];
+    let reward = 'token';
+    if (Math.random()<lucky*0.03) reward = 'weapon';
+    if (Math.random()<lucky*0.01 && reward == 'token') reward = 'variant';
+    if (Math.random()<lucky*0.08 && reward == 'token') reward = 'costume';
+    if (Math.random()<lucky*0.1 && reward == 'token') reward = 'gem';
+
+    if (reward == 'weapon'){
+        let wep = [];
+        for (var i = 0; i < weapons.length; i++){
+            if (!saveData.weapons[i].unlocked && rarity == weapons[i].rarity && weapons[i].original) wep.push(i);
+        }
+        if (wep.length<1){
+            reward='token';
+        }else{
+            saveData.lastReward-=rarity*4;
+            if (saveData.lastReward<0) saveData.lastReward = 0;
+            return 'w'+choose(wep);
+        }
+        
+    }
+    if (reward == 'costume'){
+        let co = [];
+        for (var i = 0; i < costumes.length; i++){
+            if (!saveData.costumes.includes(i) && rarity == costumes[i].rarity && costumes[i].roll) cos.push(i);
+        }
+        if (co.length<1){
+            reward='token';
+        }else{
+            saveData.lastReward-=rarity*2;
+            if (saveData.lastReward<0) saveData.lastReward = 0;
+            return 'c'+choose(co);
+        }
+    }
+    if (reward == 'variant'){
+        let va = [];
+        for (var i = 0; i < weapons.length; i++){
+            if (!saveData.weapons[i].unlocked && !weapons[i].orignal) va.push(i);
+        }
+        if (va.length<1){
+            reward='token';
+        }else{
+            saveData.lastReward-=rarity*8;
+            if (saveData.lastReward<0) saveData.lastReward = 0;
+            return 'v'+choose(va);
+        }
+    }
+    if (reward == 'token'){
+        return 't'+(Math.round(Math.random()*4)+1)
+    }
+    if (reward == 'gem'){
+        return 'g'+(Math.round(Math.random())+1)
+    }
+}
+
 var enemies=[];
 var keyBinds={
     player:{
@@ -387,7 +359,8 @@ var keyBinds={
         'DOWN':'S',
         'SWORDL':'LEFT',
         'SWORDR':'RIGHT',
-        'GUARD':'UP',
+        'GUARD':'DOWN',
+        'JAB':'UP',
     },
     player1:{
         'LEFT':'A',
@@ -415,21 +388,36 @@ function keyBind(key,maxPlayer,player){
         return eval('keyBinds.player'+player+'.'+key);
     }
 }
-function newEnemy(){
-    enemies.push({x:400,y:500,weapon:0,id:0,xv:0,yv:0,rot:Math.PI,rotv:0,ai:[0,0],});
+function newEnemy(x2,y2,weapon2){
+    enemies.push({x:x2,y:y2,weapon:weapon2,id:0,xv:0,yv:0,rot:Math.PI,rotv:0,ai:[0,0],});
 }
-newEnemy();
+newEnemy(400,500,0);
+newEnemy(200,500,0);
+
+function weaponArt(target){
+    let art2 = -1
+    for (var ii = 0; ii < weapons[target.weapon].art.length; ii++){
+        if (art2 == -1 && weapons[target.weapon].art[ii].cond(target) ){
+            art2 = weapons[target.weapon].art[ii].a;
+        }
+    }
+    if (art2 == -1) art2 = 0;
+    return art2;
+}
+
 function playerWeaponCollision(x,y,sx,sy,hurt){
     for (var i = 0; i < weapons[player.weapon].collision.length; i++){
-        let weapon = weapons[player.weapon].collision;
+        let weapon = weapons[player.weapon].collision[i];
+
+        weapon[3] = weapon[3] || 0;
 
         if (Game.collide.rect2D(
-            player.x-(weapon[i][1]/2)+weapon[i][0]*Math.cos(player.rot),
-            player.y-(weapon[i][1]/2)+weapon[i][0]*Math.sin(player.rot),
-            weapon[i][1],weapon[i][1],
+            player.x-(weapon[1]/2)+weapon[0]*Math.cos(player.rot)+(weapon[3]*Math.cos(player.rot+Math.PI/2))+((weapons[player.weapon].jabDistance*player.jabCD/12)*50)*Math.cos(player.rot),
+            player.y-(weapon[1]/2)+weapon[0]*Math.sin(player.rot)+(weapon[3]*Math.sin(player.rot+Math.PI/2))+((weapons[player.weapon].jabDistance*player.jabCD/12)*50)*Math.sin(player.rot),
+            weapon[1],weapon[1],
             x,y,
             sx,sy)
-        && (weapon[i][2] || !hurt)) return true;
+        && (weapon[2] || !hurt)) return true;
     }
     return false
 }
@@ -439,6 +427,7 @@ function draw(){
     if (canvas.getContext) {
         
         const ctx = canvas.getContext("2d");
+        ctx.filter = 'none';
         function pasteImg(image,x,y,sx,sy,rotation){
             ctx.save();
             ctx.translate(x+(sx/4), y+(sy/4)); // translate to rectangle center
@@ -456,100 +445,173 @@ function draw(){
         }
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.globalAlpha = 1;
-        ctx.font = "20px serif";
-        ctx.globalAlpha=0.3;
-        centerImage(getImage('img/shadow.png'),player.x,player.y+22,50,50);
-        ctx.globalAlpha=1;
-        
-        for (var i = 0; i < enemies.length; i++){
-            ctx.globalAlpha=0.3;//Render enemy
-            centerImage(getImage('img/shadow.png'),enemies[i].x,enemies[i].y+22,50,50);
+        if (levelState.state == 'play'){
+            centerImage(getImage('img/background.png'),320,320,640,640);
+            
+            ctx.font = "20px serif";
+            ctx.globalAlpha = 0.4;
+            ctx.filter = 'blur(2px)';
+            centerImage(getImage('img/shadow.png'),player.x,player.y+10,65,65);
             ctx.globalAlpha=1;
-            centerImage(getImage('img/costume/costume1-0.png'),enemies[i].x,enemies[i].y,50,50);
-            centerImage(getImage('img/costume/costume1-1.png'),
-                enemies[i].x+(8*Math.cos((Math.PI/-2)+Game.directionFrom(enemies[i].x,enemies[i].y,player.x,player.y))),
-                enemies[i].y+(8*Math.sin((Math.PI/-2)+Game.directionFrom(enemies[i].x,enemies[i].y,player.x,player.y))),
-                50,50);
-            //Render enemy weapon
-            pasteImg(getImage('img/weapon'+enemies[i].weapon+'.png'),
-            enemies[i].x-(150/4)+50*Math.cos(enemies[i].rot),
-            enemies[i].y-(150/4)+50*Math.sin(enemies[i].rot),
-            150,150,
-            enemies[i].rot);
-            
-        }
-        //document.querySelector('#test').innerHTML=player.rot+', '+enemies[0].rot;
-        //Player
-        
-        //Math.max(10,(Math.sqrt(((player.x-enemies[0].x)^2)+((player.y-enemies[0].y)^2))));
-        centerImage(getImage('img/costume/costume0-0.png'),player.x,player.y,50,50);
-        centerImage(getImage('img/costume/costume0-1.png'),
-            player.x+(8*Math.cos((Math.PI/-2)+Game.directionFrom(player.x,player.y,enemies[0].x,enemies[0].y))),
-            player.y+(8*Math.sin((Math.PI/-2)+Game.directionFrom(player.x,player.y,enemies[0].x,enemies[0].y))),
-            50,50);
-        //Weapon
-        pasteImg(getImage('img/weapon'+player.weapon+'.png'),
-        player.x-(150/4)+50*Math.cos(player.rot+(player.gdCD*(Math.PI/(-10*player.guardDir))/10)),
-        player.y-(150/4)+50*Math.sin(player.rot+(player.gdCD*(Math.PI/(-10*player.guardDir))/10)),
-        150,150,
-        player.rot+(player.gdCD*(Math.PI/(1.5*(player.guardDir)))/10));
-        if (player.weapon==4 || weapons[4].variants.includes(player.weapon)){
-            pasteImg(getImage('img/weapon'+player.weapon+'.png'),
-                player.x-(150/4)+50*Math.cos(Math.PI+player.rot+(player.gdCD*(Math.PI/(-10*player.guardDir))/10)),
-                player.y-(150/4)+50*Math.sin(Math.PI+player.rot+(player.gdCD*(Math.PI/(-10*player.guardDir))/10)),
+            ctx.filter = 'none'
+            centerImage(getImage('img/border.png'),320,320,640,640);
+
+            let art = 0;
+            for (var i = 0; i < enemies.length; i++){
+                ctx.globalAlpha=0.4;//Render enemy
+                ctx.filter = 'blur(2px)';
+                centerImage(getImage('img/shadow.png'),enemies[i].x,enemies[i].y+10,65,65);
+                ctx.filter = 'none';
+                ctx.globalAlpha=1;
+
+                centerImage(getImage('img/costume/costume1-0.png'),enemies[i].x,enemies[i].y,50,50);
+                centerImage(getImage('img/costume/costume1-1.png'),
+                    enemies[i].x+(8*Math.cos((Math.PI/-2)+Game.directionFrom(enemies[i].x,enemies[i].y,player.x,player.y))),
+                    enemies[i].y+(8*Math.sin((Math.PI/-2)+Game.directionFrom(enemies[i].x,enemies[i].y,player.x,player.y))),
+                    50,50);
+                //Render enemy weapon
+                art = weaponArt(enemies[i]);
+
+                pasteImg(getImage('img/weapon'+art+'.png'),
+                enemies[i].x-(150/4)+50*Math.cos(enemies[i].rot),
+                enemies[i].y-(150/4)+50*Math.sin(enemies[i].rot),
                 150,150,
-                Math.PI+player.rot+(player.gdCD*(Math.PI/(1.5*(player.guardDir)))/10));
-        }
-        if (false){//Draw weapon collision. Debug purposes
-            for (var i = 0; i < weapons[player.weapon].collision.length; i++){
-                let weapon = weapons[player.weapon].collision[i];
-                ctx.globalAlpha = 0.4;
-                ctx.fillRect(
-                    player.x-(weapon[1]/2)+(weapon[0]*Math.cos(player.rot+(player.gdCD*(Math.PI/(-10*player.guardDir))/-5))),
-                    player.y-(weapon[1]/2)+(weapon[0]*Math.sin(player.rot+(player.gdCD*(Math.PI/(-10*player.guardDir))/-5)))
-                    ,weapon[1],weapon[1]);
+                enemies[i].rot);
+                
             }
-            for (var ii = 0; ii < enemies.length; ii++){
-                for (var i = 0; i < weapons[enemies[ii].weapon].collision.length; i++){
-                    let weapon = weapons[enemies[ii].weapon].collision[i];
+
+            //Player
+            
+            //Math.max(10,(Math.sqrt(((player.x-enemies[0].x)^2)+((player.y-enemies[0].y)^2))));
+            //ctx.filter = 'hue-rotate('+((Date.now()*0.75)%360)+'deg)';
+            centerImage(getImage('img/costume/costume0-0.png'),player.x,player.y,50,50);
+            ctx.filter = 'none';
+            let src = 1;
+            
+            src = 1;
+            if (player.blink<10) src = 3;
+            player.blink--;
+            if (player.blink<0){
+                let min = 60;
+                let max = 160;
+                
+                if (player.health/player.maxHealth<1) min *= (player.health/player.maxHealth); max *= (player.health/player.maxHealth);
+                player.blink = min + Math.random()*(max-min)
+                
+            }
+            
+
+            centerImage(getImage('img/costume/costume0-'+src+'.png'),
+                player.x+(8*Math.cos((Math.PI/-2)+Game.directionFrom(player.x,player.y,enemies[0].x,enemies[0].y))),
+                player.y+(8*Math.sin((Math.PI/-2)+Game.directionFrom(player.x,player.y,enemies[0].x,enemies[0].y))),
+                75,75);
+
+            centerImage(getImage('img/costume/costume0-'+4+'.png'),
+                player.x+(8*Math.cos((Math.PI/-2)+Game.directionFrom(player.x,player.y,enemies[0].x,enemies[0].y))),
+                player.y+(8*Math.sin((Math.PI/-2)+Game.directionFrom(player.x,player.y,enemies[0].x,enemies[0].y))),
+                75,75);
+            //Weapon
+            art = weaponArt(player);
+            let dir = player.rot+(player.gdCD*(Math.PI/(-weapons[player.weapon].guardOffset[0]*player.guardDir))/10);
+            let dir2 = player.rot+(player.gdCD*(Math.PI/(weapons[player.weapon].guardOffset[1]*player.guardDir))/10)
+            
+            if (weapons[player.weapon].parryFrame.includes(player.gdCD)) ctx.filter = 'brightness(300%)';
+
+            pasteImg(getImage('img/weapon'+art+'.png'),
+                player.x-(150/4)+((1+(weapons[player.weapon].jabDistance*player.jabCD/12))*50)*Math.cos(dir),
+                player.y-(150/4)+((1+(weapons[player.weapon].jabDistance*player.jabCD/12))*50)*Math.sin(dir),
+                150,150,
+                dir2);
+                
+            
+            if (player.weapon==4 || weapons[4].variants.includes(player.weapon)){
+                pasteImg(getImage('img/weapon'+art+'.png'),
+                    player.x-(150/4)+((1+(weapons[player.weapon].jabDistance*player.jabCD/12))*50)*Math.cos(Math.PI+player.rot+(player.gdCD*(Math.PI/(-10*player.guardDir))/10)),
+                    player.y-(150/4)+((1+(weapons[player.weapon].jabDistance*player.jabCD/12))*50)*Math.sin(Math.PI+player.rot+(player.gdCD*(Math.PI/(-10*player.guardDir))/10)),
+                    150,150,
+                    Math.PI+player.rot+(player.gdCD*(Math.PI/(1.5*(player.guardDir)))/10));
+            }
+            ctx.filter = 'none';
+
+            if (false){
+                //Draw weapon collision. Debug purposes
+                for (var i = 0; i < weapons[player.weapon].collision.length; i++){
+                    let weapon = weapons[player.weapon].collision[i];
+                    weapon[3]=weapon[3] || 0;
                     ctx.globalAlpha = 0.4;
+                    let direction = player.rot+(player.gdCD*(Math.PI/(-weapons[player.weapon].guardOffset[0]*player.guardDir))/10);
+
                     ctx.fillRect(
-                        enemies[ii].x-(weapon[1]/2)+(weapon[0]*Math.cos(enemies[ii].rot)),
-                        enemies[ii].y-(weapon[1]/2)+(weapon[0]*Math.sin(enemies[ii].rot))
-                        ,weapon[1],weapon[1]);
+                        player.x-(weapon[1]/2)+(weapon[0]*Math.cos(direction))+(weapon[3]*Math.cos(direction+Math.PI/2))+((weapons[player.weapon].jabDistance*player.jabCD/12)*50)*Math.cos(direction),
+                        player.y-(weapon[1]/2)+(weapon[0]*Math.sin(direction))+(weapon[3]*Math.sin(direction+Math.PI/2))+((weapons[player.weapon].jabDistance*player.jabCD/12)*50)*Math.sin(direction),
+                        weapon[1],weapon[1]);
                 }
+                for (var ii = 0; ii < enemies.length; ii++){
+                    for (var i = 0; i < weapons[enemies[ii].weapon].collision.length; i++){
+                        let weapon = weapons[enemies[ii].weapon].collision[i];
+                        weapon[3] = weapon[3] || 0;
+                        let direction = enemies[ii].rot;
+
+                        ctx.globalAlpha = 0.4;
+                        ctx.fillRect(
+                            enemies[ii].x-(weapon[1]/2)+(weapon[0]*Math.cos(direction))+(weapon[3]*Math.cos(direction+Math.PI/2)),
+                            enemies[ii].y-(weapon[1]/2)+(weapon[0]*Math.sin(direction))+(weapon[3]*Math.sin(direction+Math.PI/2))
+                            ,weapon[1],weapon[1]);
+                    }
+                }
+                
+                
             }
+            //Healthbars
+            ctx.globalAlpha=1;
+            if (player.iframe==0){
+                centerImage(getImage('img/healthbarGreen.png'),player.x,player.y-40,60,60);
+            }else{
+                centerImage(getImage('img/healthbarWhite.png'),player.x,player.y-40,60,60);
+            }
+            for (var i = 0; i < enemies.length; i++){
+                centerImage(getImage('img/healthbarGreen.png'),enemies[i].x,enemies[i].y-40,60,60);
+            }
+            if (player.health<=0){
+                centerImage(getImage('img/healthbarRed.png'),player.x,player.y-40,60,60);
+            }else{
+                ctx.drawImage(
+                getImage('img/healthbarRed.png'),
+                54+(540*(player.health/player.maxHealth)),
+                0,
+                640,
+                640,
+                player.x-24+50*(player.health/player.maxHealth),
+                player.y-40-30,
+                60,
+                60);
+            }
+        }
+        if (levelState.state == 'menu'){
+            ctx.fillStyle = "rgba(50,200,250)";
+            ctx.fillRect(0,0,640,640);
+            ctx.fillStyle = "rgba(200,250,255)";
+            ctx.fillRect(0,0,640,175);
+
+            let interval = (Math.PI/10)*Math.sin(Date.now()/800);
+
+            centerImage(getImage('img/menu/island0.png'),320,380,320,320);
+            centerImage(getImage('img/menu/island0.png'),175,443,240,240);
+            centerImage(getImage('img/menu/island0.png'),500,443,120,120);
+            ctx.globalAlpha = 0.4;
+            ctx.filter = 'blur(2px)';
+            centerImage(getImage('img/shadow.png'),(interval*40)+320,265,120,40);
+            ctx.globalAlpha = 1;
+            ctx.filter = 'none';
+            pasteImg(getImage('img/player.png'),(interval*40)+320-(96/4),220-(96/4),96,96,interval);
             
-            
         }
-        //Healthbars
-        ctx.globalAlpha=1;
-        if (player.iframe==0){
-            centerImage(getImage('img/healthbarGreen.png'),player.x,player.y-40,60,60);
-        }else{
-            centerImage(getImage('img/healthbarWhite.png'),player.x,player.y-40,60,60);
-        }
-        for (var i = 0; i < enemies.length; i++){
-            centerImage(getImage('img/healthbarGreen.png'),enemies[i].x,enemies[i].y-40,60,60);
-        }
-        if (player.health<=0){
-            centerImage(getImage('img/healthbarRed.png'),player.x,player.y-40,60,60);
-        }else{
-            ctx.drawImage(
-            getImage('img/healthbarRed.png'),
-            54+(540*(player.health/player.maxHealth)),
-            0,
-            640,
-            640,
-            player.x-24+50*(player.health/player.maxHealth),
-            player.y-40-30,
-            60,
-            60);
-        }
-        
 
     }
+    
 }
+//----------------------------------------------------  LOGIC -------------------------------
+
 function logic(){
     let movement = 1;
     let swing = 1;
@@ -560,11 +622,16 @@ function logic(){
     let swordR = false;
     let swordL = false;
 
-    if (player.gdCD>0){
-        movement *= weapons[player.weapon].guardMoveSpeed;
-        swing *= (weapons[player.weapon].guardSwingSpeed*(player.gdCD))/(8);
-    }
 
+    if (player.gdCD>0){
+        movement *= (8/Math.min(8,player.gdCD))*weapons[player.weapon].guardMoveSpeed;
+        swing *= (8/Math.min(8,player.gdCD))*weapons[player.weapon].guardSwingSpeed;
+    }
+    if (player.jabCD>0){
+        movement *= (8/Math.min(8,player.jabCD))*weapons[player.weapon].jabMoveSpeed;
+        swing *= (8/Math.min(8,player.jabCD))*weapons[player.weapon].jabSwingSpeed;
+    }
+    
     
 
     if (player.kbCD<1){
@@ -588,13 +655,13 @@ function logic(){
 
     
     if (player.blockCD<1){
-        if (Game.key.pressed(keyBind('SWORDR',1,1)) && player.rotv<weapons[player.weapon].maxSpeed * swing){
+        if (Game.key.pressed(keyBind('SWORDR',1,1))){
             //if (player.rotv<0) swing *= weapons[player.weapon].directionChange;
             if (player.gdCD==0) player.guardDir=1
             player.rotv+=weapons[player.weapon].speed * swing;
             swordR = true;
         }
-        if (Game.key.pressed(keyBind('SWORDL',1,1)) && player.rotv>-weapons[player.weapon].maxSpeed * swing){
+        if (Game.key.pressed(keyBind('SWORDL',1,1))){
             //if (player.rotv>0) swing *= weapons[player.weapon].directionChange;
             if (player.gdCD==0) player.guardDir=-1
             player.rotv-=weapons[player.weapon].speed * swing;
@@ -608,35 +675,39 @@ function logic(){
         player.gdCD+=weapons[player.weapon].guardSpeed[0];
         
         if (player.gdCD>8) player.gdCD=8;
+    }else if (Game.key.pressed(keyBind('JAB',1,1))){
+        player.jabCD += weapons[player.weapon].jabSpeed[0];
+        
+        if (player.jabCD>8) player.jabCD=8;
     }
 
     player.x += player.xv * Game.deltaTime * 40;
     player.y += player.yv * Game.deltaTime * 40;
     player.rot += player.rotv * Game.deltaTime * 40;
     
-    if (playerWeaponCollision(640,0,1,640,false)){
+    if (playerWeaponCollision(614,0,1,615,false)){
         player.x-=player.xv * Game.deltaTime * 40;
-        player.xv=-10*(0.2+Math.abs(player.rotv));
+        player.xv=-10*(Math.abs(player.rotv));
         player.kbCD=10;
         player.rot-=player.rotv * Game.deltaTime * 40;
         player.rotv=0;
     }
 
-    if (playerWeaponCollision(0,0,1,640,false)){
+    if (playerWeaponCollision(0,0,26,615,false)){
         player.x-=player.xv * Game.deltaTime * 40;
         player.xv=10*(Math.abs(player.rotv));
         player.kbCD=10;
         player.rot-=player.rotv * Game.deltaTime * 40;
         player.rotv=0;
     }
-    if (playerWeaponCollision(0,0,640,1,false)){
+    if (playerWeaponCollision(0,24,640,1,false)){
         player.y-=player.yv * Game.deltaTime * 40;
         player.yv=10*(Math.abs(player.rotv));
         player.kbCD=10;
         player.rot-=player.rotv * Game.deltaTime * 40;
         player.rotv=0;
     }
-    if (playerWeaponCollision(0,640,640,1,false)){
+    if (playerWeaponCollision(0,614,615,1,false)){
         player.y-=player.yv * Game.deltaTime * 40;
         player.yv=-10*(Math.abs(player.rotv));
         player.kbCD=10;
@@ -645,20 +716,20 @@ function logic(){
     }
     
 
-    if (player.x>640-25){//Level bounds
-        player.x=640-25;
+    if (player.x>615-25){//Level bounds
+        player.x=615-25;
         player.xv=0;
     }
-    if (player.x<25){
-        player.x=25;
+    if (player.x<50){
+        player.x=50;
         player.xv=0;
     }
-    if (player.y>640-25){
-        player.y=640-25;
+    if (player.y>615-25){
+        player.y=615-25;
         player.yv=0;
     }
-    if (player.y<25){
-        player.y=25;
+    if (player.y<50){
+        player.y=50;
         player.yv=0;
     }
     for (var i = 0; i < enemies.length; i++){
@@ -667,11 +738,18 @@ function logic(){
         enemies[i].rot += enemies[i].rotv * Game.deltaTime * 40;
         for (var ii = 0; ii < weapons[enemies[i].weapon].collision.length; ii++){
             let weapon = weapons[enemies[i].weapon].collision;
+
+            weapon[ii][3] = weapon[ii][3] || 0;
+
             if (playerWeaponCollision(
-                enemies[i].x-(weapon[ii][1]/2)+weapon[ii][0]*Math.cos(enemies[i].rot),
-                enemies[i].y-(weapon[ii][1]/2)+weapon[ii][0]*Math.sin(enemies[i].rot),
+                enemies[i].x-(weapon[ii][1]/2)+weapon[ii][0]*Math.cos(enemies[i].rot)+(weapon[ii][3]*Math.cos(enemies[i].rot+Math.PI/2)),
+                enemies[i].y-(weapon[ii][1]/2)+weapon[ii][0]*Math.sin(enemies[i].rot)+(weapon[ii][3]*Math.sin(enemies[i].rot+Math.PI/2)),
                 weapon[ii][1],weapon[ii][1]))
             {//Weapon Collision
+
+                player.rotv+=0.1*Math.sign((player.rotv==0?1:player.rotv));
+                enemies[i].rotv+=0.1*Math.sign((enemies[i].rotv==0?1:enemies[i].rotv));
+
                 player.blockCD=15;
                 enemies[i].blockCD=15;
                 player.rot-=player.rotv;
@@ -679,18 +757,20 @@ function logic(){
 
                 let knockback = weapons[player.weapon].knockbackTaken*weapons[enemies[i].weapon].knockbackGiven;
                 player.rotv*=-knockback;//Player
-
-                if (player.rotv>0){
-                    player.xv=knockback*25*Math.abs(player.rotv+enemies[i].rotv)*Math.cos(player.rot-Math.PI/2);
-                    player.yv=knockback*25*Math.abs(player.rotv+enemies[i].rotv)*Math.sin(player.rot-Math.PI/2);
- 
-                }else{
-                    player.xv=knockback*25*Math.abs(player.rotv+enemies[i].rotv)*Math.cos(player.rot+Math.PI/2);
-                    player.yv=knockback*25*Math.abs(player.rotv+enemies[i].rotv)*Math.sin(player.rot+Math.PI/2);
+                if (!weapons[player.weapon].parryFrame.includes(player.gdCD)){
+                    if (player.rotv<0){
+                        player.xv=knockback*25*Math.abs(player.rotv+enemies[i].rotv)*Math.cos(player.rot-Math.PI/2);
+                        player.yv=knockback*25*Math.abs(player.rotv+enemies[i].rotv)*Math.sin(player.rot-Math.PI/2);
+    
+                    }else{
+                        player.xv=knockback*25*Math.abs(player.rotv+enemies[i].rotv)*Math.cos(player.rot+Math.PI/2);
+                        player.yv=knockback*25*Math.abs(player.rotv+enemies[i].rotv)*Math.sin(player.rot+Math.PI/2);
+                    }
                 }
 
                 knockback = weapons[player.weapon].knockbackGiven*weapons[enemies[i].weapon].knockbackTaken;
                 enemies[i].rotv*=-knockback;//Enemy
+                if (weapons[player.weapon].parryFrame.includes(player.gdCD)) knockback *=2;
 
                 if (enemies[i].rotv>0){
                     enemies[i].xv-=knockback*25*Math.abs(player.rotv+enemies[i].rotv)*Math.cos(enemies[i].rot-Math.PI/2);
@@ -702,7 +782,7 @@ function logic(){
                 }
 
                 
-                enemies[i].rotv*=-1*weapons[enemies[i].weapon].knockbackTaken;
+                enemies[i].rotv*=-1*weapons[enemies[i].weapon].knockbackTaken*-player.rotv;
                     
             }else if (Game.collide.rect2D(
                 enemies[i].x-(weapon[ii][1]/2)+weapon[ii][0]*Math.cos(enemies[i].rot),
@@ -711,34 +791,34 @@ function logic(){
                 player.x-25,player.y-25,50,50
             )){
                 if (player.iframe==0){
-                    
-                    if (weapon[ii][2]){
-                        player.health-=weapons[enemies[i].weapon].damage;
-                        levelState.freezeFrame=10;
-                        player.iframe=Math.floor(8/weapons[enemies[i].weapon].maxSpeed);
-                    }
+                    player.health-=weapons[enemies[i].weapon].damage*weapon[ii][2];
+                    levelState.freezeFrame=10;
+                    player.iframe=Math.floor(8/weapons[enemies[i].weapon].maxSpeed);
+                    player.blink = 9;
                 }
             }
 
         }
-        enemies[i].xv*=0.9;
-        enemies[i].yv*=0.9;
-        enemies[i].rotv*=0.9;
-        if (enemies[i].x>640-25){//Level bounds
-            enemies[i].x=640-25;
-            enemies[i].xv=0;
+        
+        // enemies[i].rotv+=0.02
+        enemies[i].xv *= 0.9;
+        enemies[i].yv *= 0.9;
+        enemies[i].rotv *= 0.9;
+        if (enemies[i].x > 615-25){//Level bounds
+            enemies[i].x = 615-25;
+            enemies[i].xv = 0;
         }
-        if (enemies[i].x<25){
-            enemies[i].x=25;
-            enemies[i].xv=0;
+        if (enemies[i].x < 50){
+            enemies[i].x = 50;
+            enemies[i].xv = 0;
         }
-        if (enemies[i].y>640-25){
-            enemies[i].y=640-25;
-            enemies[i].yv=0;
+        if (enemies[i].y > 615-25){
+            enemies[i].y = 615-25;
+            enemies[i].yv = 0;
         }
-        if (enemies[i].y<25){
-            enemies[i].y=25;
-            enemies[i].yv=0;
+        if (enemies[i].y < 50){
+            enemies[i].y = 50;
+            enemies[i].yv = 0;
         }
     }
 
@@ -758,29 +838,55 @@ function logic(){
     if (player.gdCD>0 && !Game.key.pressed(keyBind('GUARD',1,1))) player.gdCD-=weapons[player.weapon].guardSpeed[1];
     if (player.gdCD<0) player.gdCD=0;
     if (player.blockCD>0) player.blockCD--;
-    if (player.iframe>0) player.iframe--;
+    if (player.iframe>0) player.iframe--;   
+    if (player.jabCD>0 && !Game.key.pressed(keyBind('JAB',1,1))) player.jabCD-=weapons[player.weapon].jabSpeed[1];
+    if (player.jabCD<0) player.jabCD = 0;
+
     
 }
 function tick(){
-    if (levelState.freezeFrame < 1){
+    if (levelState.freezeFrame < 1 && levelState.state == 'play'){
         logic();
     }else{
         levelState.freezeFrame--;
     }
     draw();
-    updateGameSimple();
+    updateGameSimple(); 
+    ticks++;
+    if (ticks > tickRate) ticks = 0;
+}
+function reload(){
+    const ctx = canvas.getContext("2d");
+    
 
+    let len = preloadSfxs.length+preloadImages.length;
+
+    for (var i = 0; i < preloadImages.length; i++){
+        preloadImage(preloadImages[i]);
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "black";
+        ctx.fillRect(0,0,640,640);
+        ctx.fillStyle = "yellow";
+        ctx.fillRect(240,300,160*((1+i)/len),40);
+        
+    }
+    for (var i = 0; i < preloadSfxs.length; i++){
+        preloadSfx(preloadSfxs[i]);
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "black";
+        ctx.fillRect(0,0,640,640);
+        ctx.fillStyle = "yellow";
+        ctx.fillRect(240,300,160*((preloadImages.length+1+i)/len),40);
+    }
 }
 
-for (var i = 0; i < preloadImages.length; i++){
-    preloadImage(preloadImages[i]);
-}
-for (var i = 0; i < preloadSfxs.length; i++){
-    preloadSfx(preloadSfxs[i]);
-}
+reload();
 
 
 
+var tickRate =  60;
+var ticks = 0;
 
-
-setInterval(tick,1000/60);
+setInterval(tick,1000/tickRate);
