@@ -35,6 +35,10 @@ bonus: (A boost that can be applied by using the current costume. If you get it 
 
 
 
+//Hi Rohan. If you are reading this, I could explain to you a few of my plans for this game if you are curious.
+
+
+
 const costumes = [
     {
         cost:0,
@@ -42,6 +46,7 @@ const costumes = [
         rarity:0,
         name:'Blue',
         desc:'The one and only, annoyingly optimistic, the true classic. What can even compete?',
+        unlock:'',
         roll:false,
         show:true,
         
@@ -52,6 +57,7 @@ const costumes = [
         rarity:0,
         name:'Red',
         desc:'The main antagonist of Duels. This Rook is not particularly a villain, however just has some anger control issues.',
+        unlock:'',
         roll:false,
         show:true,
         bonus:{
@@ -69,6 +75,7 @@ const costumes = [
         rarity:0,
         name:'Green',
         desc:'One of the colors not yet featured in duels, Green has a skeptical and decisive personality.',
+        unlock:'',
         roll:true,
         show:true,
         bonus:{
@@ -86,6 +93,7 @@ const costumes = [
         rarity:0,
         name:'Yellow',
         desc:'This Little rook is very crazy. But also, slightly mysterious in her actions. What could she be hiding?',
+        unlock:'',
         roll:true,
         show:true,
         bonus:{
@@ -103,6 +111,7 @@ const costumes = [
         rarity:2,
         name:'Bionic Rook',
         desc:'This Rook is half robot, half rook. Well, actually 20% Robot, but 50% sounds cooler',
+        unlock:'',
         roll:true,
         show:true,
         bonus:{
@@ -120,6 +129,7 @@ const costumes = [
         rarity:1,
         name:'King Rook',
         desc:'This Rook believes that he is an amazing king, however not only is he not amazing, but he is also not the king. What a dummy',
+        unlock:'',
         roll:true,
         show:true,
         bonus:{
@@ -155,6 +165,7 @@ const costumes = [
         rarity:3,
         name:'Jelly Rook',
         desc:'This rook leaves behind a residue behind wherever she goes. A sticky residue. Even the Divine One is bothered by it.',
+        unlock:'',
         roll:true,
         show:true,
         bonus:{
@@ -172,6 +183,7 @@ const costumes = [
         rarity:2,
         name:'Roock',
         desc:'Strong as a Rook, Smart as a Rock.',
+        unlock:'',
         roll:true,
         show:true,
         bonus:{
@@ -189,6 +201,7 @@ const costumes = [
         rarity:1,
         name:'Baseball',
         desc:'Safe! Or not?',
+        unlock:'',
         roll:true,
         show:true,
         bonus:{
@@ -246,6 +259,24 @@ const costumes = [
         roll:false,
         show:false,
         bonus:{
+            desc:'10% damage, health, and speed decrease (what a challenge!)',
+            unlocked:true,
+            speed:0.9,
+            damage:{mult:0.9,add:0},
+            health:{mult:0.9,add:0},
+            size:1,guard:1,jab:1,swing:1,
+        },
+    },
+    {
+        cost:240,
+        tokens:true,
+        rarity:3,
+        name:'Pencil',
+        desc:'Brilliant minded, the pencil rook is constant pestered by other rooks wanting an autograph. "Give me a second to take my shoes off." Pencil likes to crack a joke.',
+        unlock:'',
+        roll:false,
+        show:false,
+        bonus:{
             desc:'15% damage, health, and speed decrease',
             unlocked:true,
             speed:0.85,
@@ -254,7 +285,6 @@ const costumes = [
             size:1,guard:1,jab:1,swing:1,
         },
     },
-    
 ];
 function unlockCostume(i,tokenCost,gemCost){
     let tokenCost = tokenCost || 0;

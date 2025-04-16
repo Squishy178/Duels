@@ -32,7 +32,7 @@ if (true){
     Game.randomDirection=function(){return Math.random()*Math.PI*2;}
     Game.quarterTurn=Math.PI/2;
     Game.randomInt=function(min,max){return min+Math.round(Math.random()*(max-min));}//Returns a random integer based on a minimum and maximum, and then rounded.
-    Game.distance2D=function(x1,y1,x2,y2){return Math.sqrt((x1-x2)^2+(y1-y2)^2);}
+    Game.distance2D=function(x1,y1,x2,y2){return Math.sqrt((x1-x2)**2+(y1-y2)**2);}
     // Game.distance3D=function(x1,y1,z1,x2,y2,z2){return Math.sqrt((x1-x2)^2+(y1-y2)^2+(z1-z2)^2);}
     
     Game.directionFrom=function(x1,y1,x2,y2){return -Math.atan2((x1-x2),(y1-y2));}
@@ -226,15 +226,10 @@ var player={
     iframe:0,
     blink:120,
     jabCD:0,
-
+    statusEffects:[],
 };
 
 var enemies = [];
-//Specifications for costumes;
-//Rarity 0: Little change/small item/color swap   20 tokens
-//1: Major item or something  40 tokens
-//2: Complete body overhaul   80 tokens
-//3: Only the most premium!   200 tokens
 
 var saveData={
     tokens:10,
@@ -268,86 +263,6 @@ var saveData={
     ],
     lastReward:10,
 
-}
-//Normal box: 2 rolls
-//Big Box: 4 rolls
-//Large box: 8 rolls
-//Grand box: 16 rolls
-
-//Gem conversion rate: (Discounts)
-//1 gem -> 3 tokens
-//2 gems -> 1 Normal box
-//3 gems -> 1 Big box
-//7 gems -> 1 Large box
-//13 gems -> 1 Grand box
-
-//Rarity weapon cost:
-//120 tokens -> common       0
-//240 tokens -> rare         1
-//480 tokens -> epic         2
-//1000 tokens -> legendary   3
-
-
-function rollLoot(luck){
-    let lucky = luck*(1+Math.log(saveData.lastReward/10))
-    let rarity = 0;//Common
-    if (Math.random()<0.275*lucky) rarity = 1;//Rare
-    if (Math.random()<0.10*lucky && rarity == 0) rarity = 2;//Epic
-    if (Math.random()<0.025*lucky && rarity == 0) rarity = 3;//Legendary
-    if (Math.random()<0.005*lucky && rarity == 0) rarity = 4;//Prismatic (EXTREMELY RARE!)
-
-    let reward = 'token';
-    if (Math.random()<lucky*0.03) reward = 'weapon';
-    if (Math.random()<lucky*0.01 && reward == 'token') reward = 'variant';
-    if (Math.random()<lucky*0.08 && reward == 'token') reward = 'costume';
-    if (Math.random()<lucky*0.1 && reward == 'token') reward = 'gem';
-
-    if (reward == 'weapon'){
-        let wep = [];
-        for (var i = 0; i < weapons.length; i++){
-            if (!saveData.weapons[i].unlocked && rarity == weapons[i].rarity && weapons[i].original) wep.push(i);
-        }
-        if (wep.length<1){
-            reward='token';
-        }else{
-            saveData.lastReward-=rarity*4;
-            if (saveData.lastReward<0) saveData.lastReward = 0;
-            return 'w'+choose(wep);
-        }
-        
-    }
-    if (reward == 'costume'){
-        let co = [];
-        for (var i = 0; i < costumes.length; i++){
-            if (!saveData.costumes.includes(i) && rarity == costumes[i].rarity && costumes[i].roll) cos.push(i);
-        }
-        if (co.length<1){
-            reward='token';
-        }else{
-            saveData.lastReward-=rarity*2;
-            if (saveData.lastReward<0) saveData.lastReward = 0;
-            return 'c'+choose(co);
-        }
-    }
-    if (reward == 'variant'){
-        let va = [];
-        for (var i = 0; i < weapons.length; i++){
-            if (!saveData.weapons[i].unlocked && !weapons[i].orignal) va.push(i);
-        }
-        if (va.length<1){
-            reward='token';
-        }else{
-            saveData.lastReward-=rarity*8;
-            if (saveData.lastReward<0) saveData.lastReward = 0;
-            return 'v'+choose(va);
-        }
-    }
-    if (reward == 'token'){
-        return 't'+(Math.round(Math.random()*4)+1)
-    }
-    if (reward == 'gem'){
-        return 'g'+(Math.round(Math.random())+1)
-    }
 }
 
 var enemies=[];
@@ -419,6 +334,21 @@ function playerWeaponCollision(x,y,sx,sy,hurt){
             sx,sy)
         && (weapon[2] || !hurt)) return true;
     }
+    if (player.weapon == 4 || weapons[4].variants.includes(player.weapon)){
+        for (var i = 0; i < weapons[player.weapon].collision.length; i++){
+            let weapon = weapons[player.weapon].collision[i];
+    
+            weapon[3] = weapon[3] || 0;
+    
+            if (Game.collide.rect2D(
+                player.x-(weapon[1]/2)-weapon[0]*Math.cos(player.rot)+(weapon[3]*Math.cos(player.rot+Math.PI/2))+((weapons[player.weapon].jabDistance*player.jabCD/12)*50)*Math.cos(player.rot),
+                player.y-(weapon[1]/2)-weapon[0]*Math.sin(player.rot)+(weapon[3]*Math.sin(player.rot+Math.PI/2))+((weapons[player.weapon].jabDistance*player.jabCD/12)*50)*Math.sin(player.rot),
+                weapon[1],weapon[1],
+                x,y,
+                sx,sy)
+            && (weapon[2] || !hurt)) return true;
+        }
+    }
     return false
 }
 
@@ -462,7 +392,7 @@ function draw(){
                 ctx.filter = 'blur(2px)';
                 centerImage(getImage('img/shadow.png'),enemies[i].x,enemies[i].y+10,65,65);
                 ctx.filter = 'none';
-                ctx.globalAlpha=1;
+                ctx.globalAlpha = 1;
 
                 centerImage(getImage('img/costume/costume1-0.png'),enemies[i].x,enemies[i].y,50,50);
                 centerImage(getImage('img/costume/costume1-1.png'),
@@ -471,46 +401,65 @@ function draw(){
                     50,50);
                 //Render enemy weapon
                 art = weaponArt(enemies[i]);
-
                 pasteImg(getImage('img/weapon'+art+'.png'),
                 enemies[i].x-(150/4)+50*Math.cos(enemies[i].rot),
                 enemies[i].y-(150/4)+50*Math.sin(enemies[i].rot),
                 150,150,
                 enemies[i].rot);
-                
+                if (enemies[i].weapon==4 || weapons[4].variants.includes(enemies[i].weapon)){
+                    pasteImg(getImage('img/weapon'+art+'.png'),
+                    enemies[i].x-(150/4)+50*Math.cos(Math.PI+enemies[i].rot),
+                    enemies[i].y-(150/4)+50*Math.sin(Math.PI+enemies[i].rot),
+                    150,150,
+                    Math.PI+enemies[i].rot);
+                }
             }
 
             //Player
             
             //Math.max(10,(Math.sqrt(((player.x-enemies[0].x)^2)+((player.y-enemies[0].y)^2))));
             //ctx.filter = 'hue-rotate('+((Date.now()*0.75)%360)+'deg)';
+            if (player.iframe>0) ctx.filter = 'brightness(150%)';
             centerImage(getImage('img/costume/costume0-0.png'),player.x,player.y,50,50);
             ctx.filter = 'none';
             let src = 1;
             
             src = 1;
+            //Kinda stupid, but here is the BLINKING CODE :laughing-crying:
             if (player.blink<10) src = 3;
             player.blink--;
             if (player.blink<0){
                 let min = 60;
                 let max = 160;
                 
-                if (player.health/player.maxHealth<1) min *= (player.health/player.maxHealth); max *= (player.health/player.maxHealth);
+                min *= 0.33+0.66*(player.health/player.maxHealth); max *= 0.33+0.66*(player.health/player.maxHealth);
                 player.blink = min + Math.random()*(max-min)
                 
             }
-            
 
+            //Find the closest Enemy and look at them!
+            let closest = 9999;
+            let closestI = 0;
+            for (var i = 0; i < enemies.length; i++){
+                if (closest > Game.distance2D(player.x,player.y,enemies[i].x,enemies[i].y)){
+                    closest = Game.distance2D(player.x,player.y,enemies[i].x,enemies[i].y);
+                    closestI = i;
+                }
+            }
+            
+            
             centerImage(getImage('img/costume/costume0-'+src+'.png'),
-                player.x+(8*Math.cos((Math.PI/-2)+Game.directionFrom(player.x,player.y,enemies[0].x,enemies[0].y))),
-                player.y+(8*Math.sin((Math.PI/-2)+Game.directionFrom(player.x,player.y,enemies[0].x,enemies[0].y))),
+                player.x+(8*Math.cos((Math.PI/-2)+Game.directionFrom(player.x,player.y,enemies[closestI].x,enemies[closestI].y))),
+                player.y+(8*Math.sin((Math.PI/-2)+Game.directionFrom(player.x,player.y,enemies[closestI].x,enemies[closestI].y))),
                 75,75);
 
             centerImage(getImage('img/costume/costume0-'+4+'.png'),
-                player.x+(8*Math.cos((Math.PI/-2)+Game.directionFrom(player.x,player.y,enemies[0].x,enemies[0].y))),
-                player.y+(8*Math.sin((Math.PI/-2)+Game.directionFrom(player.x,player.y,enemies[0].x,enemies[0].y))),
+                player.x+(8*Math.cos((Math.PI/-2)+Game.directionFrom(player.x,player.y,enemies[closestI].x,enemies[closestI].y))),
+                player.y+(8*Math.sin((Math.PI/-2)+Game.directionFrom(player.x,player.y,enemies[closestI].x,enemies[closestI].y))),
                 75,75);
             //Weapon
+            ctx.filter = 'none';
+
             art = weaponArt(player);
             let dir = player.rot+(player.gdCD*(Math.PI/(-weapons[player.weapon].guardOffset[0]*player.guardDir))/10);
             let dir2 = player.rot+(player.gdCD*(Math.PI/(weapons[player.weapon].guardOffset[1]*player.guardDir))/10)
@@ -538,13 +487,26 @@ function draw(){
                 for (var i = 0; i < weapons[player.weapon].collision.length; i++){
                     let weapon = weapons[player.weapon].collision[i];
                     weapon[3]=weapon[3] || 0;
-                    ctx.globalAlpha = 0.4;
+                    ctx.globalAlpha = 0.9;
                     let direction = player.rot+(player.gdCD*(Math.PI/(-weapons[player.weapon].guardOffset[0]*player.guardDir))/10);
 
-                    ctx.fillRect(
+                    ctx.strokeRect(
                         player.x-(weapon[1]/2)+(weapon[0]*Math.cos(direction))+(weapon[3]*Math.cos(direction+Math.PI/2))+((weapons[player.weapon].jabDistance*player.jabCD/12)*50)*Math.cos(direction),
                         player.y-(weapon[1]/2)+(weapon[0]*Math.sin(direction))+(weapon[3]*Math.sin(direction+Math.PI/2))+((weapons[player.weapon].jabDistance*player.jabCD/12)*50)*Math.sin(direction),
                         weapon[1],weapon[1]);
+                }
+                if (player.weapon==4 || weapons[4].variants.includes(player.weapon)){
+                    for (var i = 0; i < weapons[player.weapon].collision.length; i++){
+                        let weapon = weapons[player.weapon].collision[i];
+                        weapon[3]=weapon[3] || 0;
+                        ctx.globalAlpha = 0.9;
+                        let direction = player.rot+(player.gdCD*(Math.PI/(-weapons[player.weapon].guardOffset[0]*player.guardDir))/10);
+    
+                        ctx.strokeRect(
+                            player.x-(weapon[1]/2)+(-weapon[0]*Math.cos(direction))+(weapon[3]*Math.cos(direction+Math.PI/2))-((weapons[player.weapon].jabDistance*player.jabCD/12)*50)*Math.cos(direction),
+                            player.y-(weapon[1]/2)+(-weapon[0]*Math.sin(direction))+(weapon[3]*Math.sin(direction+Math.PI/2))-((weapons[player.weapon].jabDistance*player.jabCD/12)*50)*Math.sin(direction),
+                            weapon[1],weapon[1]);
+                    }
                 }
                 for (var ii = 0; ii < enemies.length; ii++){
                     for (var i = 0; i < weapons[enemies[ii].weapon].collision.length; i++){
@@ -552,8 +514,8 @@ function draw(){
                         weapon[3] = weapon[3] || 0;
                         let direction = enemies[ii].rot;
 
-                        ctx.globalAlpha = 0.4;
-                        ctx.fillRect(
+                        ctx.globalAlpha = 0.9;
+                        ctx.strokeRect(
                             enemies[ii].x-(weapon[1]/2)+(weapon[0]*Math.cos(direction))+(weapon[3]*Math.cos(direction+Math.PI/2)),
                             enemies[ii].y-(weapon[1]/2)+(weapon[0]*Math.sin(direction))+(weapon[3]*Math.sin(direction+Math.PI/2))
                             ,weapon[1],weapon[1]);
@@ -624,12 +586,12 @@ function logic(){
 
 
     if (player.gdCD>0){
-        movement *= (8/Math.min(8,player.gdCD))*weapons[player.weapon].guardMoveSpeed;
-        swing *= (8/Math.min(8,player.gdCD))*weapons[player.weapon].guardSwingSpeed;
+        movement *= (8/Math.max(8,player.gdCD))*weapons[player.weapon].guardMoveSpeed;
+        swing *= (8/Math.max(8,player.gdCD))*weapons[player.weapon].guardSwingSpeed;
     }
     if (player.jabCD>0){
-        movement *= (8/Math.min(8,player.jabCD))*weapons[player.weapon].jabMoveSpeed;
-        swing *= (8/Math.min(8,player.jabCD))*weapons[player.weapon].jabSwingSpeed;
+        movement *= (8/Math.max(8,player.jabCD))*weapons[player.weapon].jabMoveSpeed;
+        swing *= (8/Math.max(8,player.jabCD))*weapons[player.weapon].jabSwingSpeed;
     }
     
     
@@ -670,12 +632,12 @@ function logic(){
 }
     if (player.rotv>weapons[player.weapon].maxSpeed * swing) player.rotv=weapons[player.weapon].maxSpeed * swing;
     if (player.rotv<-weapons[player.weapon].maxSpeed * swing) player.rotv=-weapons[player.weapon].maxSpeed * swing;
-    if (Game.key.pressed(keyBind('GUARD',1,1))){
+    if (Game.key.pressed(keyBind('GUARD',1,1)) && player.jabCD < 5){
         
         player.gdCD+=weapons[player.weapon].guardSpeed[0];
         
         if (player.gdCD>8) player.gdCD=8;
-    }else if (Game.key.pressed(keyBind('JAB',1,1))){
+    }else if (Game.key.pressed(keyBind('JAB',1,1)) && player.gdCD < 5){
         player.jabCD += weapons[player.weapon].jabSpeed[0];
         
         if (player.jabCD>8) player.jabCD=8;
@@ -690,10 +652,10 @@ function logic(){
         player.xv=-10*(Math.abs(player.rotv));
         player.kbCD=10;
         player.rot-=player.rotv * Game.deltaTime * 40;
-        player.rotv=0;
+        player.rotv*=0.05;
     }
 
-    if (playerWeaponCollision(0,0,26,615,false)){
+    if (playerWeaponCollision(0,0,26,615,false)){//Weapon colliding with the border
         player.x-=player.xv * Game.deltaTime * 40;
         player.xv=10*(Math.abs(player.rotv));
         player.kbCD=10;
@@ -736,25 +698,37 @@ function logic(){
         enemies[i].x += enemies[i].xv * Game.deltaTime * 40;
         enemies[i].y += enemies[i].yv * Game.deltaTime * 40;
         enemies[i].rot += enemies[i].rotv * Game.deltaTime * 40;
+
         for (var ii = 0; ii < weapons[enemies[i].weapon].collision.length; ii++){
-            let weapon = weapons[enemies[i].weapon].collision;
+            let weapon = weapons[enemies[i].weapon].collision[ii];
 
-            weapon[ii][3] = weapon[ii][3] || 0;
+            weapon[3] = weapon[3] || 0;
+            
+            let cond = playerWeaponCollision(
+                enemies[i].x-(weapon[1]/2)+(weapon[0]*Math.cos(enemies[i].rot))+(weapon[3]*Math.cos(enemies[i].rot+Math.PI/2)),
+                enemies[i].y-(weapon[1]/2)+(weapon[0]*Math.sin(enemies[i].rot))+(weapon[3]*Math.sin(enemies[i].rot+Math.PI/2)),
+                weapon[1],weapon[1]);
 
-            if (playerWeaponCollision(
-                enemies[i].x-(weapon[ii][1]/2)+weapon[ii][0]*Math.cos(enemies[i].rot)+(weapon[ii][3]*Math.cos(enemies[i].rot+Math.PI/2)),
-                enemies[i].y-(weapon[ii][1]/2)+weapon[ii][0]*Math.sin(enemies[i].rot)+(weapon[ii][3]*Math.sin(enemies[i].rot+Math.PI/2)),
-                weapon[ii][1],weapon[ii][1]))
+            if (weapon[0]<0){
+                cond = 
+                playerWeaponCollision(
+                    enemies[i].x-(weapon[1]/2)+(weapon[0]*Math.cos(enemies[i].rot))+(weapon[3]*Math.cos(enemies[i].rot+Math.PI/2)),
+                    enemies[i].y-(weapon[1]/2)+(weapon[0]*Math.sin(enemies[i].rot))+(weapon[3]*Math.sin(enemies[i].rot+Math.PI/2)),
+                    weapon[1],weapon[1]);
+            }
+
+            if (cond)
             {//Weapon Collision
-
+    
+                weapons[player.weapon].triggers.onCollide();
                 player.rotv+=0.1*Math.sign((player.rotv==0?1:player.rotv));
                 enemies[i].rotv+=0.1*Math.sign((enemies[i].rotv==0?1:enemies[i].rotv));
-
+    
                 player.blockCD=15;
                 enemies[i].blockCD=15;
                 player.rot-=player.rotv;
                 enemies[i].rot-=enemies[i].rotv;
-
+    
                 let knockback = weapons[player.weapon].knockbackTaken*weapons[enemies[i].weapon].knockbackGiven;
                 player.rotv*=-knockback;//Player
                 if (!weapons[player.weapon].parryFrame.includes(player.gdCD)){
@@ -767,37 +741,36 @@ function logic(){
                         player.yv=knockback*25*Math.abs(player.rotv+enemies[i].rotv)*Math.sin(player.rot+Math.PI/2);
                     }
                 }
-
+    
                 knockback = weapons[player.weapon].knockbackGiven*weapons[enemies[i].weapon].knockbackTaken;
                 enemies[i].rotv*=-knockback;//Enemy
                 if (weapons[player.weapon].parryFrame.includes(player.gdCD)) knockback *=2;
-
+    
                 if (enemies[i].rotv>0){
                     enemies[i].xv-=knockback*25*Math.abs(player.rotv+enemies[i].rotv)*Math.cos(enemies[i].rot-Math.PI/2);
                     enemies[i].yv-=knockback*25*Math.abs(player.rotv+enemies[i].rotv)*Math.sin(enemies[i].rot-Math.PI/2);
- 
+    
                 }else{
                     enemies[i].xv-=knockback*25*Math.abs(player.rotv+enemies[i].rotv)*Math.cos(enemies[i].rot+Math.PI/2);
                     enemies[i].yv-=knockback*25*Math.abs(player.rotv+enemies[i].rotv)*Math.sin(enemies[i].rot+Math.PI/2);
                 }
-
+    
                 
                 enemies[i].rotv*=-1*weapons[enemies[i].weapon].knockbackTaken*-player.rotv;
                     
             }else if (Game.collide.rect2D(
-                enemies[i].x-(weapon[ii][1]/2)+weapon[ii][0]*Math.cos(enemies[i].rot),
-                enemies[i].y-(weapon[ii][1]/2)+weapon[ii][0]*Math.sin(enemies[i].rot),
-                weapon[ii][1],weapon[ii][1],
+                enemies[i].x-(weapon[1]/2)+weapon[0]*Math.cos(enemies[i].rot),
+                enemies[i].y-(weapon[1]/2)+weapon[0]*Math.sin(enemies[i].rot),
+                weapon[1],weapon[1],
                 player.x-25,player.y-25,50,50
             )){
                 if (player.iframe==0){
-                    player.health-=weapons[enemies[i].weapon].damage*weapon[ii][2];
+                    player.health-=weapons[enemies[i].weapon].damage*weapon[2];
                     levelState.freezeFrame=10;
                     player.iframe=Math.floor(8/weapons[enemies[i].weapon].maxSpeed);
                     player.blink = 9;
                 }
             }
-
         }
         
         // enemies[i].rotv+=0.02
