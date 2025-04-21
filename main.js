@@ -182,6 +182,8 @@ const preloadImages=[
     'img/background.png',
     'img/border.png',
     'img/menu/island0.png',
+    'img/particle0.png',
+    'img/particle1.png',
 ];
 
 var levelState = {
@@ -264,6 +266,97 @@ var saveData={
     lastReward:10,
 
 }
+var particles = [];
+
+const particleData = [
+    {//Sparks
+        rndX:5,
+        rndY:5,
+        direction:0,
+        rndDirection:Math.PI*2,
+        speed:1,
+        rndSpeed:1,
+        art:0,
+        duration:30,
+        rndDuration:20,
+        gravityX:0,
+        rndGravityX:0,
+        gravityY:0.05,
+        rndGravityY:0.1,
+        color:0,
+        rndColor:0,
+        endColor:0,
+        rndEndColor:0,
+        size:15,
+        rndSize:10,
+        endSize:10,
+        rndEndSize:10,
+        alpha:0.75,
+        rndAlpha:0.5,
+        endAlpha:0,
+        rndEndAlpha:0,
+    },
+    {//Hurt
+        rndX:0,
+        rndY:40,
+        direction:-Math.PI/2,
+        rndDirection:Math.PI/3,
+        speed:2,
+        rndSpeed:1,
+        art:1,
+        duration:40,
+        rndDuration:20,
+        gravityX:0,
+        rndGravityX:0,
+        gravityY:0.15,
+        rndGravityY:0.05,
+        color:0,
+        rndColor:0,
+        endColor:0,
+        rndEndColor:0,
+        size:120,
+        rndSize:60,
+        endSize:5,
+        rndEndSize:2,
+        alpha:1,
+        rndAlpha:0,
+        endAlpha:1,
+        rndEndAlpha:0,
+    }
+];
+function newParticle(x2,y2,type2,count){
+    function rnd(item){
+        let rand = Math.random();
+        if (Math.random()<0.5){
+            return rand*eval('particleData['+type2+'].'+item)/2;
+        }else{
+            return rand*eval('particleData['+type2+'].'+item)/-2;
+        }
+        
+    }
+    for (var i = 0; i < count; i++){
+        let speed = particleData[type2].speed+rnd('rndSpeed');
+        let dir = particleData[type2].direction+rnd('rndDirection');
+        particles.push({
+            x:x2+rnd('rndX'),
+            y:y2+rnd('rndY'),
+            type:type2,
+            duration:particleData[type2].duration+rnd('rndDuration'),
+            maxDuration:particleData[type2].duration+rnd('rndDuration'),
+            size:particleData[type2].size+rnd('rndSize'),
+            endSize:particleData[type2].endSize+rnd('rndEndSize'),
+            alpha:particleData[type2].alpha+rnd('rndAlpha'),
+            endAlpha:particleData[type2].endAlpha+rnd('rndEndAlpha'),
+            gravityX:particleData[type2].gravityX+rnd('rndGravityX'),
+            gravityY:particleData[type2].gravityY+rnd('rndGravityY'),
+            color:particleData[type2].color+rnd('rndColor'),
+            endColor:particleData[type2].endColor+rnd('rndEndColor'),
+            direction:dir,
+            xv:speed*Math.cos(dir),
+            yv:speed* Math.sin(dir),
+        });
+    }
+}
 
 var enemies=[];
 var keyBinds={
@@ -304,10 +397,15 @@ function keyBind(key,maxPlayer,player){
     }
 }
 function newEnemy(x2,y2,weapon2){
-    enemies.push({x:x2,y:y2,weapon:weapon2,id:0,xv:0,yv:0,rot:Math.PI,rotv:0,ai:[0,0],});
+    enemies.push({x:x2,y:y2,weapon:weapon2,id:0,xv:0,yv:0,rot:Math.PI,rotv:0,ai:[0,0],health:25,maxHealth:25,iframe:0,blink:0});
 }
 newEnemy(400,500,0);
 newEnemy(200,500,0);
+
+function range(start,end,duration,maxDuration){
+    return (start*(duration/maxDuration))+(end)*((maxDuration-duration)/maxDuration)
+}
+
 
 function weaponArt(target){
     let art2 = -1
@@ -325,30 +423,27 @@ function playerWeaponCollision(x,y,sx,sy,hurt){
         let weapon = weapons[player.weapon].collision[i];
 
         weapon[3] = weapon[3] || 0;
-
-        if (Game.collide.rect2D(
-            player.x-(weapon[1]/2)+weapon[0]*Math.cos(player.rot)+(weapon[3]*Math.cos(player.rot+Math.PI/2))+((weapons[player.weapon].jabDistance*player.jabCD/12)*50)*Math.cos(player.rot),
-            player.y-(weapon[1]/2)+weapon[0]*Math.sin(player.rot)+(weapon[3]*Math.sin(player.rot+Math.PI/2))+((weapons[player.weapon].jabDistance*player.jabCD/12)*50)*Math.sin(player.rot),
-            weapon[1],weapon[1],
-            x,y,
-            sx,sy)
-        && (weapon[2] || !hurt)) return true;
-    }
-    if (player.weapon == 4 || weapons[4].variants.includes(player.weapon)){
-        for (var i = 0; i < weapons[player.weapon].collision.length; i++){
-            let weapon = weapons[player.weapon].collision[i];
-    
-            weapon[3] = weapon[3] || 0;
-    
+        if (weapon[0]<0){
             if (Game.collide.rect2D(
-                player.x-(weapon[1]/2)-weapon[0]*Math.cos(player.rot)+(weapon[3]*Math.cos(player.rot+Math.PI/2))+((weapons[player.weapon].jabDistance*player.jabCD/12)*50)*Math.cos(player.rot),
-                player.y-(weapon[1]/2)-weapon[0]*Math.sin(player.rot)+(weapon[3]*Math.sin(player.rot+Math.PI/2))+((weapons[player.weapon].jabDistance*player.jabCD/12)*50)*Math.sin(player.rot),
+                player.x-(weapon[1]/2)+weapon[0]*Math.cos(player.rot)+(weapon[3]*Math.cos(player.rot+Math.PI/2))-((weapons[player.weapon].jabDistance*player.jabCD/12)*50)*Math.cos(player.rot),
+                player.y-(weapon[1]/2)+weapon[0]*Math.sin(player.rot)+(weapon[3]*Math.sin(player.rot+Math.PI/2))-((weapons[player.weapon].jabDistance*player.jabCD/12)*50)*Math.sin(player.rot),
                 weapon[1],weapon[1],
                 x,y,
                 sx,sy)
-            && (weapon[2] || !hurt)) return true;
+            && (weapon[2]>0 || !hurt)) return true;
+        }else{
+            if (Game.collide.rect2D(
+                player.x-(weapon[1]/2)+weapon[0]*Math.cos(player.rot)+(weapon[3]*Math.cos(player.rot+Math.PI/2))+((weapons[player.weapon].jabDistance*player.jabCD/12)*50)*Math.cos(player.rot),
+                player.y-(weapon[1]/2)+weapon[0]*Math.sin(player.rot)+(weapon[3]*Math.sin(player.rot+Math.PI/2))+((weapons[player.weapon].jabDistance*player.jabCD/12)*50)*Math.sin(player.rot),
+                weapon[1],weapon[1],
+                x,y,
+                sx,sy)
+            && (weapon[2]>0 || !hurt)) return true;
         }
+
+        
     }
+    
     return false
 }
 
@@ -388,18 +483,28 @@ function draw(){
 
             let art = 0;
             for (var i = 0; i < enemies.length; i++){
+                enemies[i].blink--;
+                if (enemies[i].blink<0){
+                    let min = 160;
+                    let max = 240;
+                    
+                    min *= 0.33+0.66*(enemies[i].health/enemies[i].maxHealth); max *= 0.33+0.66*(player.health/player.maxHealth);
+                    enemies[i].blink = min + Math.random()*(max-min)
+                    
+                }
                 ctx.globalAlpha=0.4;//Render enemy
                 ctx.filter = 'blur(2px)';
                 centerImage(getImage('img/shadow.png'),enemies[i].x,enemies[i].y+10,65,65);
                 ctx.filter = 'none';
                 ctx.globalAlpha = 1;
-
+                if (enemies[i].iframe>0) ctx.filter = 'brightness(150%)';
                 centerImage(getImage('img/costume/costume1-0.png'),enemies[i].x,enemies[i].y,50,50);
                 centerImage(getImage('img/costume/costume1-1.png'),
                     enemies[i].x+(8*Math.cos((Math.PI/-2)+Game.directionFrom(enemies[i].x,enemies[i].y,player.x,player.y))),
                     enemies[i].y+(8*Math.sin((Math.PI/-2)+Game.directionFrom(enemies[i].x,enemies[i].y,player.x,player.y))),
                     50,50);
                 //Render enemy weapon
+                ctx.filter = 'none';
                 art = weaponArt(enemies[i]);
                 pasteImg(getImage('img/weapon'+art+'.png'),
                 enemies[i].x-(150/4)+50*Math.cos(enemies[i].rot),
@@ -413,6 +518,7 @@ function draw(){
                     150,150,
                     Math.PI+enemies[i].rot);
                 }
+                ctx.filter = 'none';
             }
 
             //Player
@@ -421,7 +527,6 @@ function draw(){
             //ctx.filter = 'hue-rotate('+((Date.now()*0.75)%360)+'deg)';
             if (player.iframe>0) ctx.filter = 'brightness(150%)';
             centerImage(getImage('img/costume/costume0-0.png'),player.x,player.y,50,50);
-            ctx.filter = 'none';
             let src = 1;
             
             src = 1;
@@ -429,8 +534,8 @@ function draw(){
             if (player.blink<10) src = 3;
             player.blink--;
             if (player.blink<0){
-                let min = 60;
-                let max = 160;
+                let min = 160;
+                let max = 240;
                 
                 min *= 0.33+0.66*(player.health/player.maxHealth); max *= 0.33+0.66*(player.health/player.maxHealth);
                 player.blink = min + Math.random()*(max-min)
@@ -526,13 +631,32 @@ function draw(){
             }
             //Healthbars
             ctx.globalAlpha=1;
-            if (player.iframe==0){
+            if (player.iframe<=0){
                 centerImage(getImage('img/healthbarGreen.png'),player.x,player.y-40,60,60);
             }else{
                 centerImage(getImage('img/healthbarWhite.png'),player.x,player.y-40,60,60);
             }
+
             for (var i = 0; i < enemies.length; i++){
-                centerImage(getImage('img/healthbarGreen.png'),enemies[i].x,enemies[i].y-40,60,60);
+                if (enemies[i].iframe<=0){
+                    centerImage(getImage('img/healthbarGreen.png'),enemies[i].x,enemies[i].y-40,60,60);
+                }else{
+                    centerImage(getImage('img/healthbarWhite.png'),enemies[i].x,enemies[i].y-40,60,60);
+                }
+                if (enemies[i].health<=0){
+                    centerImage(getImage('img/healthbarRed.png'),enemies[i].x,enemies[i].y-40,60,60);
+                }else{
+                    ctx.drawImage(
+                    getImage('img/healthbarRed.png'),
+                    54+(540*(enemies[i].health/enemies[i].maxHealth)),
+                    0,
+                    640,
+                    640,
+                    enemies[i].x-24+50*(enemies[i].health/enemies[i].maxHealth),
+                    enemies[i].y-40-30,
+                    60,
+                    60);
+                }
             }
             if (player.health<=0){
                 centerImage(getImage('img/healthbarRed.png'),player.x,player.y-40,60,60);
@@ -547,6 +671,17 @@ function draw(){
                 player.y-40-30,
                 60,
                 60);
+            }
+            //Particles Yay!
+            for (var i = 0; i < particles.length; i++){
+                ctx.globalAlpha = range(particles[i].alpha,particles[i].endAlpha,particles[i].duration,particles[i].maxDuration);
+                
+                centerImage(
+                    getImage('img/particle'+particleData[particles[i].type].art+'.png'),
+                    particles[i].x,particles[i].y,
+                    range(particles[i].size,particles[i].endSize,particles[i].duration,particles[i].maxDuration),
+                    range(particles[i].size,particles[i].endSize,particles[i].duration,particles[i].maxDuration));
+                ctx.globalAlpha = 1;
             }
         }
         if (levelState.state == 'menu'){
@@ -699,27 +834,55 @@ function logic(){
         enemies[i].y += enemies[i].yv * Game.deltaTime * 40;
         enemies[i].rot += enemies[i].rotv * Game.deltaTime * 40;
 
+        //Colliding with other entities
+        if (Game.distance2D(player.x,player.y,enemies[i].x,enemies[i].y)<50){
+            enemies[i].x -= enemies[i].xv * Game.deltaTime * 20;
+            enemies[i].y -= enemies[i].yv * Game.deltaTime * 20;
+
+            player.x -= player.xv * Game.deltaTime * 20;
+            player.y -= player.yv * Game.deltaTime * 20;
+
+            enemies[i].xv+=0.5*Math.cos(Math.PI/2+Game.directionFrom(enemies[i].x,enemies[i].y,player.x,player.y));
+            enemies[i].yv+=0.5*Math.sin(Math.PI/2+Game.directionFrom(enemies[i].x,enemies[i].y,player.x,player.y));
+            player.xv+=0.5*Math.cos(Math.PI/2+Game.directionFrom(player.x,player.y,enemies[i].x,enemies[i].y));
+            player.yv+=0.5*Math.sin(Math.PI/2+Game.directionFrom(player.x,player.y,enemies[i].x,enemies[i].y));
+        }
+        for (var ii = 0; ii < enemies.length; ii++){
+            if (Game.distance2D(enemies[ii].x,enemies[ii].y,enemies[i].x,enemies[i].y)<50 && ii!=i){
+                enemies[i].x -= enemies[i].xv * Game.deltaTime * 20;
+                enemies[i].y -= enemies[i].yv * Game.deltaTime * 20;
+    
+                enemies[ii].x -= enemies[ii].xv * Game.deltaTime * 20;
+                enemies[ii].y -= enemies[ii].yv * Game.deltaTime * 20;
+    
+                enemies[i].xv+=0.5*Math.cos(Math.PI/2+Game.directionFrom(enemies[i].x,enemies[i].y,enemies[ii].x,enemies[ii].y));
+                enemies[i].yv+=0.5*Math.sin(Math.PI/2+Game.directionFrom(enemies[i].x,enemies[i].y,enemies[ii].x,enemies[ii].y));
+                enemies[ii].xv+=0.5*Math.cos(Math.PI/2+Game.directionFrom(enemies[ii].x,enemies[ii].y,enemies[i].x,enemies[i].y));
+                enemies[ii].yv+=0.5*Math.sin(Math.PI/2+Game.directionFrom(enemies[ii].x,enemies[ii].y,enemies[i].x,enemies[i].y));
+            }
+        }
+
+
         for (var ii = 0; ii < weapons[enemies[i].weapon].collision.length; ii++){
             let weapon = weapons[enemies[i].weapon].collision[ii];
 
             weapon[3] = weapon[3] || 0;
             
+            // for (var iii = 0; iii < weapons[enemies[ii].weapon].collision.length; iii++){
+            //     let weapon2 = weapons[enemies[i].weapon].collision[ii];
+            
+            // }
+
             let cond = playerWeaponCollision(
                 enemies[i].x-(weapon[1]/2)+(weapon[0]*Math.cos(enemies[i].rot))+(weapon[3]*Math.cos(enemies[i].rot+Math.PI/2)),
                 enemies[i].y-(weapon[1]/2)+(weapon[0]*Math.sin(enemies[i].rot))+(weapon[3]*Math.sin(enemies[i].rot+Math.PI/2)),
                 weapon[1],weapon[1]);
 
-            if (weapon[0]<0){
-                cond = 
-                playerWeaponCollision(
-                    enemies[i].x-(weapon[1]/2)+(weapon[0]*Math.cos(enemies[i].rot))+(weapon[3]*Math.cos(enemies[i].rot+Math.PI/2)),
-                    enemies[i].y-(weapon[1]/2)+(weapon[0]*Math.sin(enemies[i].rot))+(weapon[3]*Math.sin(enemies[i].rot+Math.PI/2)),
-                    weapon[1],weapon[1]);
-            }
 
             if (cond)
             {//Weapon Collision
     
+                newParticle(enemies[i].x-(weapon[1]/2)+(weapon[0]*Math.cos(enemies[i].rot))+(weapon[3]*Math.cos(enemies[i].rot+Math.PI/2)),enemies[i].y-(weapon[1]/2)+(weapon[0]*Math.sin(enemies[i].rot))+(weapon[3]*Math.sin(enemies[i].rot+Math.PI/2)),0,5);
                 weapons[player.weapon].triggers.onCollide();
                 player.rotv+=0.1*Math.sign((player.rotv==0?1:player.rotv));
                 enemies[i].rotv+=0.1*Math.sign((enemies[i].rotv==0?1:enemies[i].rotv));
@@ -744,7 +907,7 @@ function logic(){
     
                 knockback = weapons[player.weapon].knockbackGiven*weapons[enemies[i].weapon].knockbackTaken;
                 enemies[i].rotv*=-knockback;//Enemy
-                if (weapons[player.weapon].parryFrame.includes(player.gdCD)) knockback *=2;
+                if (weapons[player.weapon].parryFrame.includes(player.gdCD)) knockback *= 2;
     
                 if (enemies[i].rotv>0){
                     enemies[i].xv-=knockback*25*Math.abs(player.rotv+enemies[i].rotv)*Math.cos(enemies[i].rot-Math.PI/2);
@@ -764,19 +927,32 @@ function logic(){
                 weapon[1],weapon[1],
                 player.x-25,player.y-25,50,50
             )){
-                if (player.iframe==0){
+                if (player.iframe<=0){
                     player.health-=weapons[enemies[i].weapon].damage*weapon[2];
                     levelState.freezeFrame=10;
                     player.iframe=Math.floor(8/weapons[enemies[i].weapon].maxSpeed);
                     player.blink = 9;
+                    newParticle(player.x,player.y,1,6);
+                }
+            }  
+        }
+        if (enemies[i].iframe>0) enemies[i].iframe--;
+            if (
+                playerWeaponCollision(enemies[i].x-25,enemies[i].y-25,50,50)
+            ){
+                if (enemies[i].iframe<=0){
+                    enemies[i].health-=weapons[player.weapon].damage;
+                    levelState.freezeFrame=10;
+                    enemies[i].iframe=Math.floor(8/weapons[player.weapon].maxSpeed);
+                    enemies[i].blink = 9;
+                    newParticle(enemies[i].x,enemies[i].y,1,6);
                 }
             }
-        }
         
         // enemies[i].rotv+=0.02
-        enemies[i].xv *= 0.9;
-        enemies[i].yv *= 0.9;
-        enemies[i].rotv *= 0.9;
+        enemies[i].xv *= 0.9 * Game.deltaTime * 60;
+        enemies[i].yv *= 0.9 *  Game.deltaTime * 60;
+        enemies[i].rotv *= 0.9 *  Game.deltaTime * 60;
         if (enemies[i].x > 615-25){//Level bounds
             enemies[i].x = 615-25;
             enemies[i].xv = 0;
@@ -796,23 +972,22 @@ function logic(){
     }
 
 
-
     if (right || left){}else{
-        player.xv*=0.9;
+        player.xv*=0.9 *  Game.deltaTime * 60;
     }
     if (up || down){}else{
-        player.yv*=0.9;
+        player.yv*=0.9 *  Game.deltaTime * 60;
     }
     if (swordR || swordL){}else{
-        player.rotv*=0.9;
+        player.rotv*=0.9 *  Game.deltaTime * 60;
     }
-    if (player.kbCD>0) player.kbCD--;
-    if (player.bnCD>0) player.bnCD--;
-    if (player.gdCD>0 && !Game.key.pressed(keyBind('GUARD',1,1))) player.gdCD-=weapons[player.weapon].guardSpeed[1];
+    if (player.kbCD>0) player.kbCD-=Game.deltaTime * 60;
+    if (player.bnCD>0) player.bnCD-=Game.deltaTime * 60;
+    if (player.gdCD>0 && !Game.key.pressed(keyBind('GUARD',1,1))) player.gdCD-=weapons[player.weapon].guardSpeed[1] * Game.deltaTime * 60;
     if (player.gdCD<0) player.gdCD=0;
-    if (player.blockCD>0) player.blockCD--;
-    if (player.iframe>0) player.iframe--;   
-    if (player.jabCD>0 && !Game.key.pressed(keyBind('JAB',1,1))) player.jabCD-=weapons[player.weapon].jabSpeed[1];
+    if (player.blockCD>0) player.blockCD-=Game.deltaTime * 60;
+    if (player.iframe>0) player.iframe-=Game.deltaTime * 60;   
+    if (player.jabCD>0 && !Game.key.pressed(keyBind('JAB',1,1))) player.jabCD-=weapons[player.weapon].jabSpeed[1] * Game.deltaTime * 60;
     if (player.jabCD<0) player.jabCD = 0;
 
     
@@ -823,6 +998,20 @@ function tick(){
     }else{
         levelState.freezeFrame--;
     }
+    var toDelete = [];
+    for (var i = 0; i < particles.length; i++){
+        particles[i].x += particles[i].xv * Game.deltaTime * 60;
+        particles[i].y += particles[i].yv * Game.deltaTime * 60;
+        particles[i].duration -=  Game.deltaTime * 60;
+        toDelete.push(particles[i].duration<=0);
+        particles[i].xv += particles[i].gravityX * Game.deltaTime * 60;
+        particles[i].yv += particles[i].gravityY * Game.deltaTime * 60;
+    }
+    for (var i = 0; i < toDelete.length; i++){
+        if (toDelete[i]) particles.splice(i,1);
+    }
+    toDelete = [];
+
     draw();
     updateGameSimple(); 
     ticks++;

@@ -32,25 +32,19 @@
         <p id = "test" class="patch">Dev Note;</p>
         <p class="patch">This is a game I am making called "Duels." I think it is pretty neat</p>
         <p class="patch">----- Things that are bugged atm ------</p>
-        <p class="patch">Weapon collision, enemy collision, wall collision, guarding hitbox,</p>
-        <p class="patch">parrying, that one weird bug where you can guard farther than usual</p>
+        <p class="patch">Weapon collision, wall collision, guarding hitbox, enemies blinking, no death (Not even added yet),</p>
+        <p class="patch">and exiting the window breaks the game. This should be fixed soon</p>
         <button onclick="if (player.weapon<4){player.weapon++}else{player.weapon=0}">Change Weapons</button>
     </div>
     <div style="position:absolute;top:20px;left:650px;">
-        <p id = "test" class="patch">0.5 Patch Notes:</p>
-        <p class="patch">- Removed Guard boosting (sorry?)</p>
-        <p class="patch">- Improved the blinking system (was kind of weird before)</p>
-        <p class="patch">- Player looks at the closest enemy, instead of the first enemy</p>
-        <p class="patch">- Temporarily (or maybe permenantly) removed parrying</p>
-        <p class="patch">- Slight weapon rebalancing</p>
-        <p class="patch">- Better effects for when hurt</p>
-        <p class="patch">- Fixed a large bug regarding the double weapons and jabbing</p>
-        <p class="patch">- Added API for special weapons, so I can execute special functions when certain events happen (data driven)</p>
-        <p class="patch">- Started work on a main menu.</p>
-        <p class="patch">- Fixed Long Guarding</p>
-        <p class="patch">- Optimized collision (now the lower damaging parts of weapons have less priority)</p>
-        <p class="patch">- Collision much more accurate (more squares = more accuracy. integrals baby)</p>
-        <p class="patch">- I wish I had something else cool to say lol.</p>
+        <p id = "test" class="patch">0.6 Patch Notes:</p>
+        <p class="patch">- Optimization</p>
+        <p class="patch">- Added extremely intuitive particle engine, which hlped me add sparks and damage particles</p>
+        <p class="patch">- Enemy can now take damage</p>
+        <p class="patch">- The enemy and the player collide with each other</p>
+        <p class="patch">- Obviously lots of bug fixes</p>
+        <p class="patch">- Rebalanced Jabbing. Now has much less of a debuff with movement and swing speed, but has more even more knockback taken, and now deals less damage (for most weapons)</p>
+        
         
     </div>
 
@@ -58,5 +52,7 @@
 <!-- <script src="server.js" defer></script> -->
 <script src="weapons.js" defer></script>
 <script src="costumes.js" defer></script>
+<script src="achievements.js" defer></script>
+<script src="statusEffects.js" defer></script>
 <script src="main.js" defer></script><!-- Main script -->
 </html>
