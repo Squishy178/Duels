@@ -117,7 +117,7 @@ const weapons = [
         visibleStats:{damage:1,speed:7,area:2,control:7,weight:8,guard:10,jab:7},
         guardSpeed:[2,2],
         knockbackGiven:0.8,
-        knockbackTaken:0.1,
+        knockbackTaken:0.2,
         guardMoveSpeed:1,
         guardSwingSpeed:1.3,
         parryFrame:[],

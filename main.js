@@ -131,7 +131,7 @@ if (true){
         }
         Game.mouse.release=false;
         Game.mouse.click=false;
-        Game.deltaTime=(Date.now()-prevDelta)/1000;
+        Game.deltaTime=Math.min((Date.now()-prevDelta)/1000,0.02);
         prevDelta=Date.now();
         
     }
@@ -169,21 +169,26 @@ const preloadImages=[
     'img/healthbarGreen.png',
     'img/healthbarRed.png',
     'img/healthbarWhite.png',
+    'img/healthbarBlack.png',
+
     'img/costume/costume0-0.png',
     'img/costume/costume0-1.png',
     'img/costume/costume0-2.png',
     'img/costume/costume0-3.png',
-    'img/costume/costume0-4.png',
-    'img/costume/costume0-5.png',
-    'img/costume/costume0-6.png',
+
 
     'img/costume/costume1-0.png',
     'img/costume/costume1-1.png',
+    'img/costume/costume1-2.png',
+    'img/costume/costume1-3.png',
+
     'img/background.png',
     'img/border.png',
     'img/menu/island0.png',
     'img/particle0.png',
     'img/particle1.png',
+
+    'img/font.png',
 ];
 
 var levelState = {
@@ -192,8 +197,31 @@ var levelState = {
     time:0,
     freezeFrame:0,
     state:'play',
+    shake:[],
+}
+function shakeScreen(pow,dur){
+    levelState.shake.push({power:pow,duration:dur});
 }
 
+function shakeOffset(){//Finds the stage offset for screen shake. 
+    let toDelete = [];
+    let x2 = 0;
+    let y2 = 0;
+    let xPow = 0.5-Math.random();
+    let yPow = 0.5-Math.random();
+
+    for (var i = 0; i < levelState.shake.length; i++){
+        x2 += xPow * 2 * levelState.shake[i].power;
+        y2 += yPow * 2 * levelState.shake[i].power;
+
+        levelState.shake[i].duration -= Game.deltaTime * 60;
+        toDelete.push(levelState.shake[i].duration<=0);
+    }
+    for (var i = 0; i < toDelete.length; i++){//Removes any current screen shake effects.
+        if (toDelete[i]) levelState.shake.splice(i,1);
+    }
+    return {x:x2,y:y2};
+}
 var loadedSfx={};
 const preloadSfxs=[
     'sfx/menu.mp3'
@@ -268,62 +296,7 @@ var saveData={
 }
 var particles = [];
 
-const particleData = [
-    {//Sparks
-        rndX:5,
-        rndY:5,
-        direction:0,
-        rndDirection:Math.PI*2,
-        speed:1,
-        rndSpeed:1,
-        art:0,
-        duration:30,
-        rndDuration:20,
-        gravityX:0,
-        rndGravityX:0,
-        gravityY:0.05,
-        rndGravityY:0.1,
-        color:0,
-        rndColor:0,
-        endColor:0,
-        rndEndColor:0,
-        size:15,
-        rndSize:10,
-        endSize:10,
-        rndEndSize:10,
-        alpha:0.75,
-        rndAlpha:0.5,
-        endAlpha:0,
-        rndEndAlpha:0,
-    },
-    {//Hurt
-        rndX:0,
-        rndY:40,
-        direction:-Math.PI/2,
-        rndDirection:Math.PI/3,
-        speed:2,
-        rndSpeed:1,
-        art:1,
-        duration:40,
-        rndDuration:20,
-        gravityX:0,
-        rndGravityX:0,
-        gravityY:0.15,
-        rndGravityY:0.05,
-        color:0,
-        rndColor:0,
-        endColor:0,
-        rndEndColor:0,
-        size:120,
-        rndSize:60,
-        endSize:5,
-        rndEndSize:2,
-        alpha:1,
-        rndAlpha:0,
-        endAlpha:1,
-        rndEndAlpha:0,
-    }
-];
+
 function newParticle(x2,y2,type2,count){
     function rnd(item){
         let rand = Math.random();
@@ -397,10 +370,10 @@ function keyBind(key,maxPlayer,player){
     }
 }
 function newEnemy(x2,y2,weapon2){
-    enemies.push({x:x2,y:y2,weapon:weapon2,id:0,xv:0,yv:0,rot:Math.PI,rotv:0,ai:[0,0],health:25,maxHealth:25,iframe:0,blink:0});
+    enemies.push({x:x2,y:y2,weapon:weapon2,id:0,xv:0,yv:0,rot:Math.PI,rotv:0,ai:[player.x,player.y],health:25,maxHealth:25,iframe:0,blink:0});
 }
 newEnemy(400,500,0);
-newEnemy(200,500,0);
+// newEnemy(200,500,0);
 
 function range(start,end,duration,maxDuration){
     return (start*(duration/maxDuration))+(end)*((maxDuration-duration)/maxDuration)
@@ -453,6 +426,8 @@ function draw(){
         
         const ctx = canvas.getContext("2d");
         ctx.filter = 'none';
+        let shake = shakeOffset();
+        
         function pasteImg(image,x,y,sx,sy,rotation){
             ctx.save();
             ctx.translate(x+(sx/4), y+(sy/4)); // translate to rectangle center
@@ -465,13 +440,33 @@ function draw(){
             
         }
         function centerImage(image,x,y,sx,sy){
-            ctx.drawImage(image,x-(sx/2),y-(sy/2),sx,sy);
-
+            ctx.drawImage(image,x+shake.x-(sx/2),y+shake.y-(sy/2),sx,sy);
+        }
+        function pasteText(x,y,txt,size){
+            let order = ['0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','!','.',',',' ','%','-','+','?'];
+            for (var i = 0; i < txt.length; i++){
+                ctx.drawImage(
+                    getImage('img/font.png'),
+                    0,
+                    (order.indexOf(txt[i].toUpperCase()))*160+1.5,
+                    160,
+                    160,
+                    shake.x+x + (i * size * 0.85),
+                    shake.y+y,
+                    size,
+                    size);
+            }
         }
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.globalAlpha = 1;
         if (levelState.state == 'play'){
-            centerImage(getImage('img/background.png'),320,320,640,640);
+            for (var ii = 0; ii < 8; ii++){
+                for (var i = 0; i < 8; i++){
+                    ctx.globalAlpha = 0.35;
+                    centerImage(getImage('img/background.png'),40+i*80,40+ii*80,80,80);
+                    ctx.globalAlpha = 1;
+                }
+            }
             
             ctx.font = "20px serif";
             ctx.globalAlpha = 0.4;
@@ -483,12 +478,14 @@ function draw(){
 
             let art = 0;
             for (var i = 0; i < enemies.length; i++){
+                let src = 1;
+                if (player.blink<10) src = 2;
                 enemies[i].blink--;
                 if (enemies[i].blink<0){
                     let min = 160;
                     let max = 240;
                     
-                    min *= 0.33+0.66*(enemies[i].health/enemies[i].maxHealth); max *= 0.33+0.66*(player.health/player.maxHealth);
+                    min *= 0.33+Math.max(0.66*(0,enemies[i].health/enemies[i].maxHealth)); max *= 0.33+0.66*(player.health/player.maxHealth);
                     enemies[i].blink = min + Math.random()*(max-min)
                     
                 }
@@ -498,11 +495,16 @@ function draw(){
                 ctx.filter = 'none';
                 ctx.globalAlpha = 1;
                 if (enemies[i].iframe>0) ctx.filter = 'brightness(150%)';
-                centerImage(getImage('img/costume/costume1-0.png'),enemies[i].x,enemies[i].y,50,50);
-                centerImage(getImage('img/costume/costume1-1.png'),
+                centerImage(getImage('img/costume/costume1-0.png'),enemies[i].x,enemies[i].y,75,75);
+                centerImage(getImage('img/costume/costume1-'+src+'.png'),
                     enemies[i].x+(8*Math.cos((Math.PI/-2)+Game.directionFrom(enemies[i].x,enemies[i].y,player.x,player.y))),
                     enemies[i].y+(8*Math.sin((Math.PI/-2)+Game.directionFrom(enemies[i].x,enemies[i].y,player.x,player.y))),
-                    50,50);
+                    75,75);
+
+                centerImage(getImage('img/costume/costume1-3.png'),
+                    enemies[i].x+(8*Math.cos((Math.PI/-2)+Game.directionFrom(enemies[i].x,enemies[i].y,player.x,player.y))),
+                    enemies[i].y+(8*Math.sin((Math.PI/-2)+Game.directionFrom(enemies[i].x,enemies[i].y,player.x,player.y))),
+                    75,75);
                 //Render enemy weapon
                 ctx.filter = 'none';
                 art = weaponArt(enemies[i]);
@@ -531,13 +533,13 @@ function draw(){
             
             src = 1;
             //Kinda stupid, but here is the BLINKING CODE :laughing-crying:
-            if (player.blink<10) src = 3;
+            if (player.blink<10) src = 2;
             player.blink--;
             if (player.blink<0){
                 let min = 160;
                 let max = 240;
                 
-                min *= 0.33+0.66*(player.health/player.maxHealth); max *= 0.33+0.66*(player.health/player.maxHealth);
+                min *= 0.33+Math.max(0,0.66*(player.health/player.maxHealth)); max *= 0.33+0.66*(player.health/player.maxHealth);
                 player.blink = min + Math.random()*(max-min)
                 
             }
@@ -558,7 +560,7 @@ function draw(){
                 player.y+(8*Math.sin((Math.PI/-2)+Game.directionFrom(player.x,player.y,enemies[closestI].x,enemies[closestI].y))),
                 75,75);
 
-            centerImage(getImage('img/costume/costume0-'+4+'.png'),
+            centerImage(getImage('img/costume/costume0-'+3+'.png'),
                 player.x+(8*Math.cos((Math.PI/-2)+Game.directionFrom(player.x,player.y,enemies[closestI].x,enemies[closestI].y))),
                 player.y+(8*Math.sin((Math.PI/-2)+Game.directionFrom(player.x,player.y,enemies[closestI].x,enemies[closestI].y))),
                 75,75);
@@ -576,7 +578,6 @@ function draw(){
                 player.y-(150/4)+((1+(weapons[player.weapon].jabDistance*player.jabCD/12))*50)*Math.sin(dir),
                 150,150,
                 dir2);
-                
             
             if (player.weapon==4 || weapons[4].variants.includes(player.weapon)){
                 pasteImg(getImage('img/weapon'+art+'.png'),
@@ -644,33 +645,35 @@ function draw(){
                     centerImage(getImage('img/healthbarWhite.png'),enemies[i].x,enemies[i].y-40,60,60);
                 }
                 if (enemies[i].health<=0){
-                    centerImage(getImage('img/healthbarRed.png'),enemies[i].x,enemies[i].y-40,60,60);
+                    centerImage(getImage('img/healthbarBlack.png'),enemies[i].x,enemies[i].y-40,60,60);
                 }else{
                     ctx.drawImage(
-                    getImage('img/healthbarRed.png'),
+                    getImage('img/healthbarBlack.png'),
                     54+(540*(enemies[i].health/enemies[i].maxHealth)),
                     0,
                     640,
                     640,
-                    enemies[i].x-24+50*(enemies[i].health/enemies[i].maxHealth),
-                    enemies[i].y-40-30,
+                    shake.x+enemies[i].x-24+50*(enemies[i].health/enemies[i].maxHealth),
+                    shake.y+enemies[i].y-40-30,
                     60,
                     60);
                 }
             }
             if (player.health<=0){
-                centerImage(getImage('img/healthbarRed.png'),player.x,player.y-40,60,60);
+                centerImage(getImage('img/healthbarBlack.png'),player.x,player.y-40,60,60);
             }else{
+                
                 ctx.drawImage(
-                getImage('img/healthbarRed.png'),
-                54+(540*(player.health/player.maxHealth)),
+                getImage('img/healthbarBlack.png'),
+                24+(540*(player.health/player.maxHealth)),
                 0,
                 640,
                 640,
-                player.x-24+50*(player.health/player.maxHealth),
-                player.y-40-30,
+                shake.x+player.x-24+50*(player.health/player.maxHealth),
+                shake.y+player.y-40-30,
                 60,
                 60);
+        
             }
             //Particles Yay!
             for (var i = 0; i < particles.length; i++){
@@ -683,6 +686,35 @@ function draw(){
                     range(particles[i].size,particles[i].endSize,particles[i].duration,particles[i].maxDuration));
                 ctx.globalAlpha = 1;
             }
+
+
+            //Do not worry. I will remove this later. 
+            let text = 'hello';
+            if (Math.random()<0.002) text = 'or4873ru9ey7tiuo8y7td';
+
+            if (player.health<25 || enemies[0].health<25) text = '...';
+            if (player.health<15) text = 'Uh oh..';
+            if (player.health<0) text = 'I should be dead...';
+            if (enemies[0].health<1) text = 'I win! Wait a sec..';
+            if (player.health >= 20 && enemies[0].health <= 0) text = 'Wow this AI is bad lol';
+            if (enemies[0].iframe>0) text = 'yes!';
+            if (enemies[0].health<-4) text = 'death is bugged bruh';
+            if (enemies[0].iframe>0 && player.health == 0) text = '!!';
+            
+            if (enemies[0].health<-4 && enemies[0].iframe>0) text = 'die already!';
+            if (enemies[0].health<-39) text = 'it is all an endless loop!!';
+            if (player.health<-14 && enemies[0].health>0) text = 'you stink at this game wow';
+            if (player.health<-50 && enemies[0].health<-50) text = 'oh lord why do you make us suffer';
+            if (enemies.health<-200) text = 'hop off you have been playin too long';
+            if (player.iframe>0) text = 'ouch!';
+            if (player.iframe>0 && player.health <= 5 && player.health>-5) text = '!!';
+                        
+            
+
+            pasteText(15,15,'hi there',20);
+            pasteText(player.x-65,player.y-100,text,20);
+
+
         }
         if (levelState.state == 'menu'){
             ctx.fillStyle = "rgba(50,200,250)";
@@ -764,7 +796,15 @@ function logic(){
             player.rotv-=weapons[player.weapon].speed * swing;
             swordL = true;
         }
-}
+    }
+
+    // let weapon = weapons[player.weapon].collision[i];
+    // if (weapons[player.weapon].maxSpeed*0.95<=Math.abs(player.rotv)){
+    //     newParticle(player.x-(weapon[1]/2)+(weapon[0]*Math.cos(player.rot))+(weapon[3]*Math.cos(player.rot+Math.PI/2)),
+    //     player.y-(weapon[1]/2)+(weapon[0]*Math.sin(player.rot))+(weapon[3]*Math.sin(player.rot+Math.PI/2)),
+    //     2,1);
+    // }
+
     if (player.rotv>weapons[player.weapon].maxSpeed * swing) player.rotv=weapons[player.weapon].maxSpeed * swing;
     if (player.rotv<-weapons[player.weapon].maxSpeed * swing) player.rotv=-weapons[player.weapon].maxSpeed * swing;
     if (Game.key.pressed(keyBind('GUARD',1,1)) && player.jabCD < 5){
@@ -782,35 +822,35 @@ function logic(){
     player.y += player.yv * Game.deltaTime * 40;
     player.rot += player.rotv * Game.deltaTime * 40;
     
-    if (playerWeaponCollision(614,0,1,615,false)){
-        player.x-=player.xv * Game.deltaTime * 40;
-        player.xv=-10*(Math.abs(player.rotv));
-        player.kbCD=10;
-        player.rot-=player.rotv * Game.deltaTime * 40;
-        player.rotv*=0.05;
-    }
+    // if (playerWeaponCollision(614,0,1,615,false)){
+    //     player.x-=player.xv * Game.deltaTime * 40;
+    //     player.xv=-10*(Math.abs(player.rotv));
+    //     player.kbCD=10;
+    //     player.rot-=player.rotv * Game.deltaTime * 40;
+    //     player.rotv*=0.05;
+    // }
 
-    if (playerWeaponCollision(0,0,26,615,false)){//Weapon colliding with the border
-        player.x-=player.xv * Game.deltaTime * 40;
-        player.xv=10*(Math.abs(player.rotv));
-        player.kbCD=10;
-        player.rot-=player.rotv * Game.deltaTime * 40;
-        player.rotv=0;
-    }
-    if (playerWeaponCollision(0,24,640,1,false)){
-        player.y-=player.yv * Game.deltaTime * 40;
-        player.yv=10*(Math.abs(player.rotv));
-        player.kbCD=10;
-        player.rot-=player.rotv * Game.deltaTime * 40;
-        player.rotv=0;
-    }
-    if (playerWeaponCollision(0,614,615,1,false)){
-        player.y-=player.yv * Game.deltaTime * 40;
-        player.yv=-10*(Math.abs(player.rotv));
-        player.kbCD=10;
-        player.rot-=player.rotv * Game.deltaTime * 40;
-        player.rotv=0;
-    }
+    // if (playerWeaponCollision(0,0,26,615,false)){//Weapon colliding with the border
+    //     player.x-=player.xv * Game.deltaTime * 40;
+    //     player.xv=10*(Math.abs(player.rotv));
+    //     player.kbCD=10;
+    //     player.rot-=player.rotv * Game.deltaTime * 40;
+    //     player.rotv=0;
+    // }
+    // if (playerWeaponCollision(0,24,640,1,false)){
+    //     player.y-=player.yv * Game.deltaTime * 40;
+    //     player.yv=10*(Math.abs(player.rotv));
+    //     player.kbCD=10;
+    //     player.rot-=player.rotv * Game.deltaTime * 40;
+    //     player.rotv=0;
+    // }
+    // if (playerWeaponCollision(0,614,615,1,false)){
+    //     player.y-=player.yv * Game.deltaTime * 40;
+    //     player.yv=-10*(Math.abs(player.rotv));
+    //     player.kbCD=10;
+    //     player.rot-=player.rotv * Game.deltaTime * 40;
+    //     player.rotv=0;
+    // }
     
 
     if (player.x>615-25){//Level bounds
@@ -829,7 +869,31 @@ function logic(){
         player.y=50;
         player.yv=0;
     }
-    for (var i = 0; i < enemies.length; i++){
+    for (var i = 0; i < enemies.length; i++){//Enemies
+        if (enemies[i].ai[0]>5+enemies[i].x){
+            enemies[i].xv+=0.4*((enemies[i].xv<0?1.5:1));
+        }
+        if (enemies[i].ai[0]+5<enemies[i].x){
+            enemies[i].xv-=0.4*((enemies[i].xv>0?1.5:1));
+        }
+        if (enemies[i].ai[1]<5+enemies[i].y){
+            enemies[i].yv-=0.4*((enemies[i].yv<0?1.5:1));
+        }
+        if (enemies[i].ai[1]+5>enemies[i].y){
+            enemies[i].yv+=0.4*((enemies[i].yv>0?1.5:1));
+        }
+        let rot = Math.random() * Math.PI * 2;
+        if (enemies[i].ai[0]>615-25) enemies[i].ai[0] = 615-25;
+        if (enemies[i].ai[0]<50) enemies[i].ai[0] = 50
+        if (enemies[i].ai[1]>615-25) enemies[i].ai[1] = 615 - 25 ;
+        if (enemies[i].ai[1]<50) enemies[i].ai[1] = 50;
+        
+        if (Math.abs(enemies[i].x-enemies[i].ai[0])<5 && Math.abs(enemies[i].y-enemies[i].ai[1])<5){
+            enemies[i].ai[0] = player.x + 120*Math.cos(rot);
+            enemies[i].ai[1] = player.y + 120*Math.sin(rot);
+        }
+
+
         enemies[i].x += enemies[i].xv * Game.deltaTime * 40;
         enemies[i].y += enemies[i].yv * Game.deltaTime * 40;
         enemies[i].rot += enemies[i].rotv * Game.deltaTime * 40;
@@ -867,6 +931,9 @@ function logic(){
             let weapon = weapons[enemies[i].weapon].collision[ii];
 
             weapon[3] = weapon[3] || 0;
+            if (weapons[enemies[i].weapon].maxSpeed*0.95<=enemies[i].rotv){
+                newParticle(enemies[i].x-(weapon[1]/2)+(weapon[0]*Math.cos(enemies[i].rot))+(weapon[3]*Math.cos(enemies[i].rot+Math.PI/2)),enemies[i].y-(weapon[1]/2)+(weapon[0]*Math.sin(enemies[i].rot))+(weapon[3]*Math.sin(enemies[i].rot+Math.PI/2)),2,1);
+            }
             
             // for (var iii = 0; iii < weapons[enemies[ii].weapon].collision.length; iii++){
             //     let weapon2 = weapons[enemies[i].weapon].collision[ii];
@@ -881,7 +948,7 @@ function logic(){
 
             if (cond)
             {//Weapon Collision
-    
+                shakeScreen(1,10);
                 newParticle(enemies[i].x-(weapon[1]/2)+(weapon[0]*Math.cos(enemies[i].rot))+(weapon[3]*Math.cos(enemies[i].rot+Math.PI/2)),enemies[i].y-(weapon[1]/2)+(weapon[0]*Math.sin(enemies[i].rot))+(weapon[3]*Math.sin(enemies[i].rot+Math.PI/2)),0,5);
                 weapons[player.weapon].triggers.onCollide();
                 player.rotv+=0.1*Math.sign((player.rotv==0?1:player.rotv));
@@ -929,10 +996,11 @@ function logic(){
             )){
                 if (player.iframe<=0){
                     player.health-=weapons[enemies[i].weapon].damage*weapon[2];
-                    levelState.freezeFrame=10;
+                    levelState.freezeFrame=5;
                     player.iframe=Math.floor(8/weapons[enemies[i].weapon].maxSpeed);
                     player.blink = 9;
                     newParticle(player.x,player.y,1,6);
+                    shakeScreen(2,15);
                 }
             }  
         }
@@ -942,10 +1010,11 @@ function logic(){
             ){
                 if (enemies[i].iframe<=0){
                     enemies[i].health-=weapons[player.weapon].damage;
-                    levelState.freezeFrame=10;
+                    levelState.freezeFrame=5;
                     enemies[i].iframe=Math.floor(8/weapons[player.weapon].maxSpeed);
                     enemies[i].blink = 9;
                     newParticle(enemies[i].x,enemies[i].y,1,6);
+                    shakeScreen(1,15);
                 }
             }
         
@@ -993,11 +1062,13 @@ function logic(){
     
 }
 function tick(){
+    
     if (levelState.freezeFrame < 1 && levelState.state == 'play'){
         logic();
     }else{
         levelState.freezeFrame--;
     }
+    //Render particles. Even if the logic is down.
     var toDelete = [];
     for (var i = 0; i < particles.length; i++){
         particles[i].x += particles[i].xv * Game.deltaTime * 60;
